@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mijn Aandelen</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>📈 Mijn Aandelen</h1>
+      <p class="subtitle">Live koersen &amp; agenda van belangrijke gebeurtenissen</p>
+    </header>
+
+    <main>
+      <section class="card add-stock">
+        <h2>Aandeel toevoegen</h2>
+        <form id="add-form" autocomplete="off">
+          <div class="search-wrap">
+            <input id="symbol-input" type="text" placeholder="Zoek op ticker of naam, bv. AAPL of ASML" required />
+            <ul id="suggestions" class="suggestions hidden"></ul>
+          </div>
+          <button type="submit">Toevoegen</button>
+        </form>
+        <p id="add-error" class="error hidden"></p>
+      </section>
+
+      <section class="card portfolio">
+        <div class="card-header">
+          <h2>Portfolio</h2>
+          <span id="last-updated" class="muted"></span>
+        </div>
+        <div class="table-wrap">
+          <table id="portfolio-table">
+            <thead>
+              <tr>
+                <th>Symbool</th>
+                <th>Naam</th>
+                <th>Koers</th>
+                <th>Verandering</th>
+                <th>Dag laag/hoog</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="portfolio-body">
+              <tr class="empty-row">
+                <td colspan="6">Nog geen aandelen toegevoegd.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card calendar">
+        <div class="card-header">
+          <h2>Agenda</h2>
+          <span class="muted">Komende 90 dagen</span>
+        </div>
+        <div id="calendar-list" class="calendar-list">
+          <p class="muted">Voeg aandelen toe om relevante gebeurtenissen te zien.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Koersdata &amp; agenda via de live feed van <a href="https://finnhub.io" target="_blank" rel="noopener">Finnhub</a>.</p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
