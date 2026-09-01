@@ -1,13 +1,16 @@
 import express from 'express';
-import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import * as finnhub from './finnhub.js';
-import { readPortfolio, addStock, removeStock } from './store.js';
-import { cached } from './cache.js';
-
-dotenv.config();
+import { FASES, STAPPEN, STAP_DOOR_NUMMER, STAP_VOLGORDE, verwachteDeadline } from './proces.js';
+import {
+  readTrajecten,
+  getTraject,
+  createTraject,
+  updateTraject,
+  deleteTraject,
+  zetStapStatus,
+} from './store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -16,180 +19,117 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// --- Portfolio -------------------------------------------------------------
+// --- Procesdefinitie (statisch, read-only) ----------------------------------
 
-app.get('/api/stocks', async (_req, res) => {
-  res.json(await readPortfolio());
+app.get('/api/proces', (_req, res) => {
+  res.json({ fases: FASES, stappen: STAPPEN });
 });
 
-app.post('/api/stocks', async (req, res) => {
-  const symbol = (req.body?.symbol || '').toString().trim().toUpperCase();
-  if (!symbol) {
-    return res.status(400).json({ error: 'Symbool is verplicht.' });
-  }
-  try {
-    const [quote, profile] = await Promise.all([
-      finnhub.getQuote(symbol),
-      finnhub.getProfile(symbol).catch(() => ({})),
-    ]);
-    const isKnown = quote && (quote.c || quote.pc || quote.h || quote.l);
-    if (!isKnown) {
-      return res.status(404).json({ error: `Onbekend symbool: ${symbol}` });
+// --- Verrijking: voortgang, deadlines en status per stap berekenen ---------
+
+function verrijkTraject(traject) {
+  let ankerDatum = traject.startdatum;
+  let aantalVoltooid = 0;
+  const stappenMetStatus = STAP_VOLGORDE.map((nummer) => {
+    const stap = STAP_DOOR_NUMMER[nummer];
+    const status = traject.stappen[nummer] || { voltooid: false, voltooidDoor: '', voltooidOp: null, notitie: '' };
+    const deadline = verwachteDeadline(stap, ankerDatum);
+    const overtijd = !status.voltooid && deadline && new Date() > new Date(deadline);
+    if (status.voltooid) {
+      aantalVoltooid += 1;
+      ankerDatum = status.voltooidOp || ankerDatum;
     }
-    const stock = {
-      symbol,
-      name: profile?.name || symbol,
-      addedAt: new Date().toISOString(),
+    return {
+      nummer,
+      titel: stap.titel,
+      eigenaar: stap.eigenaar,
+      ...status,
+      deadline,
+      overtijd: Boolean(overtijd),
     };
-    const stocks = await addStock(stock);
-    res.status(201).json(stocks);
-  } catch (err) {
-    res.status(502).json({ error: err.message });
-  }
-});
+  });
 
-app.delete('/api/stocks/:symbol', async (req, res) => {
-  const symbol = req.params.symbol.toUpperCase();
-  res.json(await removeStock(symbol));
-});
+  const huidigeStap = stappenMetStatus.find((s) => !s.voltooid) || null;
+  const huidigeFase = huidigeStap
+    ? FASES.find((f) => f.stappen.includes(huidigeStap.nummer))
+    : FASES[FASES.length - 1];
 
-// --- Zoeken (autocomplete) ---------------------------------------------------
-
-app.get('/api/search', async (req, res) => {
-  const q = (req.query.q || '').toString().trim();
-  if (!q) return res.json([]);
-  try {
-    const data = await cached(`search:${q.toLowerCase()}`, 60_000, () => finnhub.searchSymbol(q));
-    const results = (data.result || [])
-      .filter((r) => !r.type || r.type === 'Common Stock' || r.type === 'ETP')
-      .slice(0, 10)
-      .map((r) => ({ symbol: r.symbol, description: r.description }));
-    res.json(results);
-  } catch (err) {
-    res.status(502).json({ error: err.message });
-  }
-});
-
-// --- Live koersen ------------------------------------------------------------
-
-app.get('/api/quotes', async (_req, res) => {
-  try {
-    const stocks = await readPortfolio();
-    const quotes = await Promise.all(
-      stocks.map(async (s) => {
-        try {
-          const q = await cached(`quote:${s.symbol}`, 15_000, () => finnhub.getQuote(s.symbol));
-          return {
-            symbol: s.symbol,
-            name: s.name,
-            price: q.c,
-            change: q.d,
-            changePercent: q.dp,
-            high: q.h,
-            low: q.l,
-            open: q.o,
-            previousClose: q.pc,
-            updatedAt: q.t ? new Date(q.t * 1000).toISOString() : null,
-          };
-        } catch (err) {
-          return { symbol: s.symbol, name: s.name, error: err.message };
-        }
-      })
-    );
-    res.json(quotes);
-  } catch (err) {
-    res.status(502).json({ error: err.message });
-  }
-});
-
-// --- Agenda: belangrijke gebeurtenissen (earnings, dividenden) --------------
-
-function hourLabel(hour) {
-  if (hour === 'bmo') return 'voor beursopening';
-  if (hour === 'amc') return 'na beurssluiting';
-  return hour || null;
+  return {
+    ...traject,
+    voortgang: {
+      voltooid: aantalVoltooid,
+      totaal: STAP_VOLGORDE.length,
+      percentage: Math.round((aantalVoltooid / STAP_VOLGORDE.length) * 100),
+    },
+    huidigeStap: huidigeStap ? { nummer: huidigeStap.nummer, titel: huidigeStap.titel } : null,
+    huidigeFase: huidigeFase ? { id: huidigeFase.id, titel: huidigeFase.titel } : null,
+    afgerond: aantalVoltooid === STAP_VOLGORDE.length,
+    stappen: stappenMetStatus,
+  };
 }
 
-function buildEarningsDetail(e) {
-  const parts = [];
-  if (e.epsEstimate !== null && e.epsEstimate !== undefined) parts.push(`EPS verwacht: ${e.epsEstimate}`);
-  if (e.epsActual !== null && e.epsActual !== undefined) parts.push(`EPS actueel: ${e.epsActual}`);
-  if (e.revenueEstimate) {
-    parts.push(`Omzet verwacht: ${Math.round(e.revenueEstimate).toLocaleString('nl-NL')}`);
+// --- Trajecten ---------------------------------------------------------------
+
+app.get('/api/trajecten', async (_req, res) => {
+  const trajecten = await readTrajecten();
+  res.json(trajecten.map(verrijkTraject));
+});
+
+app.post('/api/trajecten', async (req, res) => {
+  const naam = (req.body?.naam || '').toString().trim();
+  if (!naam) {
+    return res.status(400).json({ error: 'Naam van het traject (klant/prospect) is verplicht.' });
   }
-  return parts.join(' • ') || undefined;
-}
+  const traject = await createTraject({
+    naam,
+    klant: req.body?.klant,
+    salesEigenaar: req.body?.salesEigenaar,
+    startdatum: req.body?.startdatum,
+  });
+  res.status(201).json(verrijkTraject(traject));
+});
 
-app.get('/api/calendar', async (_req, res) => {
-  try {
-    const stocks = await readPortfolio();
-    if (stocks.length === 0) return res.json([]);
+app.get('/api/trajecten/:id', async (req, res) => {
+  const traject = await getTraject(req.params.id);
+  if (!traject) return res.status(404).json({ error: 'Traject niet gevonden.' });
+  res.json(verrijkTraject(traject));
+});
 
-    const symbols = new Set(stocks.map((s) => s.symbol));
-    const nameBySymbol = Object.fromEntries(stocks.map((s) => [s.symbol, s.name]));
+app.patch('/api/trajecten/:id', async (req, res) => {
+  const traject = await updateTraject(req.params.id, req.body || {});
+  if (!traject) return res.status(404).json({ error: 'Traject niet gevonden.' });
+  res.json(verrijkTraject(traject));
+});
 
-    const from = new Date();
-    const to = new Date();
-    to.setDate(to.getDate() + 90);
-    const fromStr = from.toISOString().slice(0, 10);
-    const toStr = to.toISOString().slice(0, 10);
+app.delete('/api/trajecten/:id', async (req, res) => {
+  const verwijderd = await deleteTraject(req.params.id);
+  if (!verwijderd) return res.status(404).json({ error: 'Traject niet gevonden.' });
+  res.status(204).end();
+});
 
-    const events = [];
+// --- Status van een individuele stap -----------------------------------------
 
-    // Earnings (kwartaalcijfers) — één call, dan filteren op eigen portfolio.
-    try {
-      const earnings = await cached(`earnings:${fromStr}:${toStr}`, 6 * 60 * 60_000, () =>
-        finnhub.getEarningsCalendar(fromStr, toStr)
-      );
-      for (const e of earnings) {
-        if (!symbols.has(e.symbol)) continue;
-        events.push({
-          type: 'earnings',
-          symbol: e.symbol,
-          name: nameBySymbol[e.symbol] || e.symbol,
-          date: e.date,
-          title: `Kwartaalcijfers ${e.symbol}${e.hour ? ` (${hourLabel(e.hour)})` : ''}`,
-          detail: buildEarningsDetail(e),
-        });
-      }
-    } catch (err) {
-      console.warn('Kon earnings-kalender niet ophalen:', err.message);
-    }
-
-    // Dividenden per symbool — best effort, faalt stil als het plan dit niet toestaat.
-    await Promise.all(
-      stocks.map(async (s) => {
-        try {
-          const divs = await cached(`div:${s.symbol}:${fromStr}:${toStr}`, 6 * 60 * 60_000, () =>
-            finnhub.getDividends(s.symbol, fromStr, toStr)
-          );
-          for (const d of divs) {
-            const date = d.exDate || d.date;
-            if (!date) continue;
-            events.push({
-              type: 'dividend',
-              symbol: s.symbol,
-              name: s.name,
-              date,
-              title: `Ex-dividend ${s.symbol}`,
-              detail: d.amount ? `Bedrag: ${d.amount} ${d.currency || ''}`.trim() : undefined,
-            });
-          }
-        } catch (err) {
-          console.warn(`Kon dividenden voor ${s.symbol} niet ophalen:`, err.message);
-        }
-      })
-    );
-
-    events.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    res.json(events);
-  } catch (err) {
-    res.status(502).json({ error: err.message });
+app.put('/api/trajecten/:id/stappen/:nummer', async (req, res) => {
+  const { id, nummer } = req.params;
+  if (!STAP_DOOR_NUMMER[nummer]) {
+    return res.status(400).json({ error: `Onbekende stap: ${nummer}` });
   }
+  const voltooid = Boolean(req.body?.voltooid);
+  if (voltooid && !(req.body?.voltooidDoor || '').toString().trim()) {
+    return res.status(400).json({ error: 'Naam van de verantwoordelijke die aftikt is verplicht.' });
+  }
+  const traject = await zetStapStatus(id, nummer, {
+    voltooid,
+    voltooidDoor: req.body?.voltooidDoor,
+    notitie: req.body?.notitie,
+    voltooidOp: req.body?.voltooidOp,
+  });
+  if (!traject) return res.status(404).json({ error: 'Traject niet gevonden.' });
+  res.json(verrijkTraject(traject));
 });
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Niet gevonden.' }));
 
 app.listen(PORT, () => {
-  console.log(`Stock app draait op http://localhost:${PORT}`);
+  console.log(`Blisss onboarding-app draait op http://localhost:${PORT}`);
 });

@@ -1,7 +1,7 @@
 {
-  "name": "mijn-aandelen-app",
+  "name": "blisss-prospect-onboarding",
   "version": "1.0.0",
-  "description": "Eigen aandelenportfolio met live koersen en een agenda van belangrijke gebeurtenissen (earnings, dividenden)",
+  "description": "Webapp om het Blisss-proces 'Prospect naar Livegang' per traject te volgen en af te tikken",
   "type": "module",
   "private": true,
   "engines": {
@@ -11,7 +11,6 @@
     "start": "node server/index.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
     "express": "^4.19.2"
   }
 }
