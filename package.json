@@ -1,0 +1,16 @@
+{
+  "name": "blisss-prospect-onboarding",
+  "version": "1.0.0",
+  "description": "Webapp om het Blisss-proces 'Prospect naar Livegang' per traject te volgen en af te tikken",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
