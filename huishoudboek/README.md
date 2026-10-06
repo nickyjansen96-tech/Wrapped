@@ -13,9 +13,19 @@ toestel (in de browser); er gaat niets naar een server.
   HTTPS (bijv. GitHub Pages, Netlify of Cloudflare Pages). HTTPS is nodig om
   de app te kunnen installeren en offline te laten werken.
 
-## Op je telefoon zetten
+## Online via GitHub Pages
 
-- **iPhone (Safari):** open de pagina → Deel-knop → *Zet op beginscherm*.
+Na het eenmalig aanzetten van Pages (Settings → Pages → *Deploy from a branch*,
+branch `claude/stock-app-calendar-feed-a8vjd6`, map `/ (root)`) staat de app op
+https://nickyjansen96-tech.github.io/Wrapped/huishoudboek/ en wordt hij bij elke
+push automatisch bijgewerkt. Er staan alleen app-bestanden online, geen
+financiële gegevens: die blijven op je toestel.
+
+## Op je telefoon of iPad zetten
+
+- **iPhone/iPad (Safari):** open de pagina → Deel-knop → *Zet op beginscherm*.
+  Gebruik de app daarna via het icoon: Safari en de beginscherm-app hebben
+  ieder hun eigen opslag.
 - **Android (Chrome):** open de pagina → menu ⋮ → *App installeren*.
 - **Computer (Chrome/Edge):** het installeer-icoon in de adresbalk.
 
