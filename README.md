@@ -5,6 +5,10 @@ live koersen, en zie een agenda met belangrijke gebeurtenissen (kwartaalcijfers 
 earnings en dividenden) rondom die aandelen. De koersen en agenda-data komen live
 uit de [Finnhub](https://finnhub.io) API.
 
+> Ook in deze repo: het **Huishoudboek** als installeerbare app, zie
+> [`huishoudboek/README.md`](huishoudboek/README.md) — met `npm start` te openen op
+> http://localhost:3000/huishoudboek/.
+
 ## Features
 
 - **Eigen portfolio** — voeg aandelen toe via ticker-zoekopdracht (bv. `AAPL`,

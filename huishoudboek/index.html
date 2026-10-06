@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Huishoudboek</title>
+<meta name="description" content="Je huishoudboekje: ABN AMRO-export inlezen, categoriseren, budgetteren en je vermogen volgen.">
+<meta name="theme-color" content="#f2f2f7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Huishoudboek">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="bar">
+    <h1>Huishoudboek</h1>
+    <div class="navwrap">
+      <button class="navbtn" id="navbtn" aria-haspopup="true" aria-expanded="false" aria-controls="tabs"><span id="navlabel">Overzicht</span><svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <nav class="tabs" id="tabs" role="tablist" hidden>
+        <button role="tab" data-tab="overzicht">Overzicht</button>
+        <button role="tab" data-tab="vermogen">Vermogen</button>
+        <button role="tab" data-tab="transacties">Transacties</button>
+        <button role="tab" data-tab="regels">Regels</button>
+        <button role="tab" data-tab="importeren">Importeren en back-up</button>
+      </nav>
+    </div>
+    <span class="save" id="save" aria-live="polite"></span>
+  </div>
+  <div class="rail" id="rail"></div>
+</div></header>
+<main class="wrap" id="main"><div class="empty">Gegevens laden…</div></main>
+
+<script src="vendor/xlsx.full.min.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>
