@@ -11,8 +11,8 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="4";
-const TABS=["overzicht","vermogen","transacties","regels","importeren"];
+const APP_VERSION="5";
+const TABS=["overzicht","budgetten","vermogen","transacties","regels","importeren"];
 
 /* ---------- toestand ---------- */
 const S={ready:false,tx:[],months:{},rules:[],overrides:{},budgets:{},wealth:{},
@@ -128,11 +128,14 @@ function render(){
   $("#navlabel").textContent=document.querySelector('#tabs button[data-tab="'+S.tab+'"]').textContent;
   renderProfiles(); renderRail(); const main=$("#main"); main.replaceChildren();
   if(!S.ready){main.append(el("div",{class:"empty"},"Gegevens laden…"));return;}
-  ({overzicht:viewOverview,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport})[S.tab](main);
+  ({overzicht:viewOverview,budgetten:viewBudgets,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport})[S.tab](main);
 }
 function renderProfiles(){ const box=$("#profiles"); box.replaceChildren(...PROFILES.map(p=>el("button",{class:"seg","aria-pressed":p.id===profile,onclick:()=>switchProfile(p.id)},p.name))); }
-function renderRail(){ const rail=$("#rail"); rail.replaceChildren(); rail.hidden=S.tab==="regels"||S.tab==="importeren"||!S.tx.length; if(rail.hidden)return;
-  const ys=years(); const sel=el("select",{id:"year","aria-label":"Jaar",onchange:e=>{S.year=+e.target.value;S.shown=100;render();}},ys.map(y=>el("option",{value:y,selected:y===S.year},y)));
+function renderRail(){ const rail=$("#rail"); rail.replaceChildren();
+  if(S.tab==="budgetten"){ rail.hidden=false; const ys=budgetYears(); if(!ys.includes(S.year))S.year=ys[ys.length-1];
+    rail.append(el("select",{id:"year","aria-label":"Jaar",onchange:e=>{S.year=+e.target.value;render();}},ys.map(y=>el("option",{value:y,selected:y===S.year},y)))); return; }
+  rail.hidden=S.tab==="regels"||S.tab==="importeren"||!S.tx.length; if(rail.hidden)return;
+  const ys=years(); if(!ys.includes(S.year)){S.year=ys[0];} const sel=el("select",{id:"year","aria-label":"Jaar",onchange:e=>{S.year=+e.target.value;S.shown=100;render();}},ys.map(y=>el("option",{value:y,selected:y===S.year},y)));
   rail.append(sel); if(S.tab==="vermogen")return; const {cnt}=totals(S.year);
   rail.append(el("button",{class:"chip","aria-pressed":S.month===0,onclick:()=>{S.month=0;S.shown=100;render();}},"Heel jaar"));
   MONTHS.forEach((n,i)=>rail.append(el("button",{class:"chip"+(cnt[i+1]?"":" off"),"aria-pressed":S.month===i+1,onclick:()=>{S.month=i+1;S.shown=100;render();}},n)));
@@ -154,7 +157,7 @@ function viewOverview(main){
   const anyBudget=ALLCATS.some(c=>budgetOf(S.year,c,0)>0);
   const tools=el("div",{class:"tools"});
   if(m)tools.append(el("label",{},el("input",{type:"checkbox",id:"onlymonth",checked:S.onlyMonth,onchange:e=>{S.onlyMonth=e.target.checked;}}),"Budget alleen voor "+MONTHS_LONG[m-1]+" wijzigen"));
-  else tools.append(el("span",{class:"prose"},"Kies een maand om budgetten in te vullen. Het jaarbudget is de som van de maanden."));
+  else tools.append(el("span",{class:"prose"},"Kies een maand om het budget van die maand aan te passen, of vul alles in één keer in bij ",el("button",{class:"btn sm",onclick:()=>{S.tab="budgetten";go();}},"Budgetten"),"."));
   tools.append(el("button",{class:"btn sm",onclick:()=>{ for(const grp of GROUPS)for(const c of grp.cats){ const b=(S.budgets[S.year]||{})[c]; if(b&&b.base)continue;
       const avg=actual(grp,(T[c]||[])[0]||0)/span; if(avg>=5)setBudget(S.year,c,0,Math.round(avg/5)*5,false);} render(); }},
     anyBudget?"Lege budgetten vullen met mijn gemiddelde":"Budget vullen met mijn gemiddelde per maand"));
@@ -299,6 +302,66 @@ function viewRules(main){
         el("button",{class:"btn sm","aria-label":"Regel verwijderen",onclick:()=>{S.rules.splice(idx,1);compileRules();saveRules();render();}},"Verwijder")))); });
   if(!sec.children.length)sec.append(el("div",{class:"empty"},S.rules.length?"Geen regels gevonden.":"Nog geen regels. Voeg er hierboven een toe, of maak ze vanuit een transactie."));
   main.append(sec);
+}
+
+/* ---------- budgetten voor het hele jaar ---------- */
+const parseAmount=v=>Math.max(0,parseFloat(String(v).replace(/\s|€/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",","."))||0);
+const fmtIn=v=>!v?"":(Math.abs(v-Math.round(v))<0.005?String(Math.round(v)):v.toFixed(2).replace(".",","));
+function budgetYears(){ const now=new Date().getFullYear(), ys=new Set([...years(),now,now+1,...Object.keys(S.budgets).map(Number)]); return [...ys].filter(Boolean).sort((a,b)=>a-b); }
+// Referentie: het gemiddelde per maand in het gekozen jaar, of in het jaar ervoor als het gekozen jaar nog geen transacties heeft.
+function budgetRef(year){ const has=y=>S.tx.some(t=>Math.floor(t.d/10000)===y); const ry=has(year)?year:has(year-1)?year-1:null;
+  if(ry==null)return {year:null,avg:()=>0}; const {T,span}=totals(ry);
+  return {year:ry,avg:(grp,c)=>actual(grp,(T[c]||[])[0]||0)/span}; }
+const roundBudget=v=>v>=50?Math.round(v/5)*5:Math.round(v);
+function setYearBudget(year,cat,{month,yearTotal}){ const y=S.budgets[year]||(S.budgets[year]={}); const b=y[cat]||(y[cat]={base:0,m:{}});
+  if(yearTotal!=null){ b.base=yearTotal/12; b.m={}; } else b.base=month;
+  if(!b.base&&!Object.keys(b.m||{}).length)delete y[cat]; saveBudgets(); }
+function setMonthBudget(year,cat,m,val){ const y=S.budgets[year]||(S.budgets[year]={}); const b=y[cat]||(y[cat]={base:0,m:{}}); if(!b.m)b.m={};
+  if(Math.abs(val-(b.base||0))<0.005)delete b.m[m]; else b.m[m]=val; saveBudgets(); }
+function nextOnEnter(e){ if(e.key!=="Enter")return; e.preventDefault(); const col=e.target.dataset.col; const all=[...document.querySelectorAll('#main input.bin[data-col="'+col+'"]')]; const i=all.indexOf(e.target); (all[i+1]||e.target).focus(); }
+function budgetTiles(Y){ const sumG=(grp)=>grp.cats.reduce((s,c)=>s+budgetOf(Y,c,0),0);
+  const inc=sumG(GROUPS[0]), uit=sumG(GROUPS[1])+sumG(GROUPS[2])+sumG(GROUPS[3]), sp=sumG(GROUPS[4]), rest=inc-uit-sp;
+  const tile=(l,v,sub,cls)=>el("div",{class:"tile"},el("div",{class:"l"},l),el("div",{class:"v "+(cls||"")},eur0.format(v)),el("div",{class:"s"},sub));
+  return el("div",{class:"tiles",id:"btiles"},tile("Inkomsten "+Y,inc,eur0.format(inc/12)+" per maand"),tile("Uitgaven "+Y,uit,eur0.format(uit/12)+" per maand"),
+    tile("Sparen en beleggen "+Y,sp,eur0.format(sp/12)+" per maand"),tile("Niet begroot",rest,rest<-0.5?"je begroot meer dan er binnenkomt":"ruimte per maand "+eur0.format(rest/12),rest<-0.5?"neg":"pos")); }
+function budgetSum(Y,ref,gi){ const grp=GROUPS[gi], t=grp.cats.reduce((s,c)=>s+budgetOf(Y,c,0),0);
+  return el("div",{class:"brow sum",id:"bsum-"+gi},el("span",{class:"name"},"Totaal "+grp.name.toLowerCase()),el("span",{class:"num"},ref.year!=null?eur0.format(grp.cats.reduce((s,c)=>s+ref.avg(grp,c),0)):""),
+    el("span",{class:"num"},eur0.format(t/12)),el("span",{class:"num"},eur0.format(t)),el("span",{})); }
+// Werkt alleen de bedragen bij, zonder de pagina opnieuw op te bouwen: zo blijven cursor en toetsenbord in het volgende veld.
+function refreshBudget(Y,ref,gi,c){ const i=ALLCATS.indexOf(c), b=(S.budgets[Y]||{})[c];
+  const m=$("#bm-"+i), y=$("#by-"+i); if(m&&document.activeElement!==m)m.value=fmtIn(b?b.base||0:0); if(y&&document.activeElement!==y)y.value=fmtIn(budgetOf(Y,c,0));
+  $("#btiles")?.replaceWith(budgetTiles(Y)); $("#bsum-"+gi)?.replaceWith(budgetSum(Y,ref,gi)); }
+function viewBudgets(main){
+  const Y=S.year, ref=budgetRef(Y), yb=S.budgets[Y]||{};
+  main.append(budgetTiles(Y));
+  const prev=S.budgets[Y-1]&&Object.keys(S.budgets[Y-1]).length;
+  const tools=el("div",{class:"tools"});
+  if(ref.year!=null)tools.append(el("button",{class:"btn sm",onclick:()=>{ for(const grp of GROUPS)for(const c of grp.cats){ if(budgetOf(Y,c,0))continue; const a=ref.avg(grp,c); if(a>=1)setYearBudget(Y,c,{month:roundBudget(a)}); } render(); }},"Lege velden vullen met gemiddelde "+ref.year));
+  if(prev)tools.append(el("button",{class:"btn sm",onclick:()=>{ if(Object.keys(yb).length&&!confirm("Het budget van "+Y+" wordt vervangen door dat van "+(Y-1)+". Doorgaan?"))return; S.budgets[Y]=JSON.parse(JSON.stringify(S.budgets[Y-1])); saveBudgets(); render(); }},"Budget "+(Y-1)+" overnemen"));
+  if(Object.keys(yb).length)tools.append(el("button",{class:"btn sm",onclick:()=>{ if(!confirm("Alle budgetten van "+Y+" wissen?"))return; delete S.budgets[Y]; saveBudgets(); render(); }},"Alles wissen"));
+  main.append(tools);
+  main.append(el("p",{class:"prose"},"Vul per categorie een bedrag per maand ",el("b",{},"of")," per jaar in; het andere veld rekent mee. Met Enter ga je naar de volgende categorie. "+(ref.year!=null?"Tik op het gemiddelde van "+ref.year+" om het over te nemen. ":"")+"Wil je per maand iets anders, bijvoorbeeld vakantie in juli, open dan de maanden met ›."));
+  GROUPS.forEach((grp,gi)=>{ const sec=el("section",{class:"group"});
+    sec.append(el("div",{class:"brow head"},el("span",{},grp.name),el("span",{class:"h"},ref.year!=null?"Gem. "+ref.year:""),el("span",{class:"h"},"Per maand"),el("span",{class:"h"},"Per jaar"),el("span",{})));
+    for(const c of grp.cats){ const i=ALLCATS.indexOf(c), b=yb[c], own=b&&b.m&&Object.keys(b.m).length, a=ref.avg(grp,c), open=S.bOpen===c;
+      const mIn=el("input",{class:"bin",id:"bm-"+i,"data-col":"m",type:"text",inputmode:"decimal",enterkeyhint:"next",placeholder:"0",value:fmtIn(b?b.base||0:0),"aria-label":c+" per maand",
+        onkeydown:nextOnEnter,onchange:e=>{ setYearBudget(Y,c,{month:parseAmount(e.target.value)}); e.target.value=fmtIn(parseAmount(e.target.value)); refreshBudget(Y,ref,gi,c); }});
+      const yIn=el("input",{class:"bin",id:"by-"+i,"data-col":"y",type:"text",inputmode:"decimal",enterkeyhint:"next",placeholder:"0",value:fmtIn(budgetOf(Y,c,0)),"aria-label":c+" per jaar",
+        onkeydown:nextOnEnter,onchange:e=>{ const cur=(S.budgets[Y]||{})[c];
+          if(cur&&cur.m&&Object.keys(cur.m).length&&!confirm("De afwijkende maanden van "+c+" worden gelijk verdeeld. Doorgaan?")){e.target.value=fmtIn(budgetOf(Y,c,0));return;}
+          setYearBudget(Y,c,{yearTotal:parseAmount(e.target.value)}); e.target.value=fmtIn(budgetOf(Y,c,0)); refreshBudget(Y,ref,gi,c); if(own||S.bOpen===c)render(); }});
+      const refCell=ref.year!=null&&a>=0.5?el("button",{class:"refbtn",title:"Overnemen als budget per maand",onclick:()=>{ setYearBudget(Y,c,{month:roundBudget(a)}); render(); }},eur0.format(a)):el("span",{class:"num muted"},"–");
+      sec.append(el("div",{class:"brow"+(own?" own":"")},el("span",{class:"name"},c,own?el("span",{class:"tag"},"maanden verschillen"):null),refCell,mIn,yIn,
+        el("button",{class:"btn sm exp","aria-expanded":open,"aria-label":"Budget per maand voor "+c,onclick:()=>{S.bOpen=open?null:c;render();}},open?"⌄":"›")));
+      if(open){ const grid=el("div",{class:"bmonths"});
+        MONTHS.forEach((mn,k)=>{ const diff=b&&b.m&&b.m[k+1]!=null;
+          grid.append(el("label",{class:diff?"diff":""},mn,el("input",{class:"bin",id:"bmm-"+i+"-"+(k+1),"data-col":"mm"+i,type:"text",inputmode:"decimal",enterkeyhint:"next",placeholder:"0",value:fmtIn(budgetOf(Y,c,k+1)),"aria-label":c+" "+MONTHS_LONG[k],
+            onkeydown:nextOnEnter,onchange:e=>{ setMonthBudget(Y,c,k+1,parseAmount(e.target.value)); e.target.value=fmtIn(budgetOf(Y,c,k+1));
+              const cur=(S.budgets[Y]||{})[c]; e.target.parentNode.classList.toggle("diff",!!(cur&&cur.m&&cur.m[k+1]!=null)); refreshBudget(Y,ref,gi,c); }}))); });
+        sec.append(el("div",{class:"bmwrap"},grid,el("button",{class:"btn sm",onclick:()=>{ const cur=(S.budgets[Y]||{})[c]; if(cur){cur.m={};saveBudgets();} render(); }},"Alle maanden gelijk"))); }
+    }
+    sec.append(budgetSum(Y,ref,gi));
+    main.append(sec); });
 }
 
 /* ---------- vermogen ---------- */
