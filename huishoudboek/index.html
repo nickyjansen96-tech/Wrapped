@@ -18,21 +18,19 @@
 <body>
 <header class="top"><div class="wrap">
   <div class="bar">
+    <button class="back" id="back" hidden aria-label="Terug naar vorige pagina"><svg width="10" height="17" viewBox="0 0 10 17" aria-hidden="true"><path d="M8.5 1.5 1.5 8.5l7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Terug</span></button>
     <h1>Huishoudboek</h1>
-    <div class="navwrap">
-      <button class="navbtn" id="navbtn" aria-haspopup="true" aria-expanded="false" aria-controls="tabs"><span id="navlabel">Overzicht</span><svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <nav class="tabs" id="tabs" role="tablist" hidden>
-        <button role="tab" data-tab="overzicht">Overzicht</button>
-        <button role="tab" data-tab="budgetten">Budgetten</button>
-        <button role="tab" data-tab="vermogen">Vermogen</button>
-        <button role="tab" data-tab="transacties">Transacties</button>
-        <button role="tab" data-tab="regels">Regels</button>
-        <button role="tab" data-tab="importeren">Importeren en back-up</button>
-      </nav>
-    </div>
     <span class="save" id="save" aria-live="polite"></span>
     <div class="profiles" id="profiles" role="group" aria-label="Profiel"></div>
   </div>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Onderdelen">
+    <button role="tab" data-tab="overzicht">Overzicht</button>
+    <button role="tab" data-tab="budgetten">Budgetten</button>
+    <button role="tab" data-tab="vermogen">Vermogen</button>
+    <button role="tab" data-tab="transacties">Transacties</button>
+    <button role="tab" data-tab="regels">Regels</button>
+    <button role="tab" data-tab="importeren">Importeren</button>
+  </nav>
   <div class="rail" id="rail"></div>
 </div></header>
 <main class="wrap" id="main"><div class="empty">Gegevens laden…</div></main>

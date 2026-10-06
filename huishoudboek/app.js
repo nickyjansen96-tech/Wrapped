@@ -11,7 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="5";
+const APP_VERSION="6";
 const TABS=["overzicht","budgetten","vermogen","transacties","regels","importeren"];
 
 /* ---------- toestand ---------- */
@@ -91,13 +91,15 @@ function loadProfile(){ resetData();
 function switchProfile(id){ if(id===profile)return; flushSaves(); profile=id;
   try{ localStorage.setItem(LAST_PROFILE,id); }catch(e){}
   loadProfile(); if(!S.tx.length)S.tab="importeren"; setSave(""); go(); }
+function setProfileQuiet(id){ flushSaves(); profile=id; try{ localStorage.setItem(LAST_PROFILE,id); }catch(e){} loadProfile(); setSave(""); }
 function boot(){
   migrateLegacy(); loadProfile();
   if(!store.ok)setSave("Opslaan is in deze browser niet beschikbaar; wijzigingen blijven niet bewaard.",true);
   try{ navigator.storage?.persist?.(); }catch(e){}
   S.ready=true;
-  const h=location.hash.slice(1); if(TABS.includes(h))S.tab=h;
-  if(!S.tx.length)S.tab="importeren";
+  const h=location.hash.slice(1); if(TABS.includes(h))S.tab=h; else if(!S.tx.length)S.tab="importeren";
+  const st=history.state; if(st&&st.profile===profile&&TABS.includes(st.tab))restoreView(st);
+  try{ history.replaceState(viewState(st&&st.n||0),"","#"+S.tab); }catch(e){}
   render();
 }
 function years(){ return [...new Set(S.tx.map(t=>Math.floor(t.d/10000)))].sort((a,b)=>b-a); }
@@ -125,7 +127,8 @@ const actual=(g,v)=>g.kind==="in"?v:-v;
 /* ---------- weergave ---------- */
 function render(){
   for(const b of document.querySelectorAll("#tabs button"))b.setAttribute("aria-selected",b.dataset.tab===S.tab);
-  $("#navlabel").textContent=document.querySelector('#tabs button[data-tab="'+S.tab+'"]').textContent;
+  const cur=document.querySelector('#tabs button[aria-selected="true"]'); if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:"nearest",inline:"nearest"});
+  $("#back").hidden=!(history.state&&history.state.n>0);
   renderProfiles(); renderRail(); const main=$("#main"); main.replaceChildren();
   if(!S.ready){main.append(el("div",{class:"empty"},"Gegevens laden…"));return;}
   ({overzicht:viewOverview,budgetten:viewBudgets,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport})[S.tab](main);
@@ -500,12 +503,19 @@ function viewImport(main){
     main.append(sec); }
   main.append(el("p",{class:"prose"},"Versie "+APP_VERSION));
 }
-function go(){ try{history.replaceState(null,"","#"+S.tab);}catch(e){} render(); window.scrollTo(0,0); }
-function navOpen(open){ $("#tabs").hidden=!open; $("#navbtn").setAttribute("aria-expanded",open); }
-$("#navbtn").addEventListener("click",e=>{e.stopPropagation();navOpen($("#tabs").hidden);});
-$("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]");if(b){S.tab=b.dataset.tab;navOpen(false);go();}});
-document.addEventListener("click",e=>{if(!e.target.closest(".navwrap"))navOpen(false);});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#tabs").hidden){navOpen(false);$("#navbtn").focus();}});
+/* ---------- navigatie en terug ---------- */
+// Elke paginawissel komt in de browsergeschiedenis, zodat Terug (knop of veeggebaar) naar de vorige pagina gaat,
+// inclusief profiel, gekozen periode, filters en scrollpositie.
+function viewState(n){ return {n,profile,tab:S.tab,year:S.year,month:S.month,fCat:S.fCat,fUnk:S.fUnk,fText:S.fText,scroll:0}; }
+function restoreView(st){ Object.assign(S,{tab:st.tab,fCat:st.fCat||"",fUnk:!!st.fUnk,fText:st.fText||"",shown:100,ruleFor:null});
+  if(st.year!=null)S.year=st.year; if(st.month!=null)S.month=st.month; }
+function go(){ try{ const prev=history.state||viewState(0); history.replaceState({...prev,scroll:window.scrollY},"");
+    history.pushState(viewState((prev.n||0)+1),"","#"+S.tab); }catch(e){} render(); window.scrollTo(0,0); }
+addEventListener("popstate",e=>{ const st=e.state; if(!st||!TABS.includes(st.tab)){ const h=location.hash.slice(1); if(TABS.includes(h)){S.tab=h;render();} return; }
+  if(st.profile&&st.profile!==profile&&PROFILES.some(p=>p.id===st.profile))setProfileQuiet(st.profile);
+  restoreView(st); render(); window.scrollTo(0,st.scroll||0); });
+$("#back").addEventListener("click",()=>history.back());
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]"); if(b&&b.dataset.tab!==S.tab){S.tab=b.dataset.tab;go();}});
 addEventListener("pagehide",flushSaves); document.addEventListener("visibilitychange",()=>{if(document.hidden)flushSaves();});
 if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
 boot();

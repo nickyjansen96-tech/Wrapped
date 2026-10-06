@@ -75,7 +75,7 @@ Doe dit na elke nieuwe import om ook nieuwe winkels en partijen te laten indelen
   van vóór de profielen worden automatisch naar Nicky verplaatst.
 - Profielen staan per toestel: wat op de ene telefoon staat, staat niet
   vanzelf op de andere. Overzetten kan met een back-up.
-- Onder *Importeren en back-up* maak je per profiel een JSON-back-up en zet je die terug,
+- Onder *Importeren* maak je per profiel een JSON-back-up en zet je die terug,
   bijvoorbeeld om naar een ander toestel over te stappen.
 - Een back-up-bestand (`.json`) kun je ook gewoon in het importvak slepen.
 
