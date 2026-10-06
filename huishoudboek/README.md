@@ -36,20 +36,22 @@ profiel heeft eigen transacties, regels, budgetten, vermogen en back-ups. De
 app onthoudt welk profiel het laatst open stond. Profielen staan in `PROFILES`
 bovenin `app.js`.
 
-## Budgetten voor het hele jaar
+## Overzicht en budget
 
-Tabblad *Budgetten*: per categorie één rij met een bedrag **per maand** of
-**per jaar** (het andere veld rekent mee). Enter gaat naar de volgende
-categorie. Daarnaast:
+Eén pagina voor wat je werkelijk uitgeeft én je budget. Kies bovenaan een jaar
+(ook volgend jaar) en *Heel jaar* of een maand. Per categorie:
 
-- het gemiddelde per maand uit je transacties (van dat jaar, of het jaar
-  ervoor); tik erop om het over te nemen, of vul alle lege velden in één keer;
-- *Budget vorig jaar overnemen* en *Alles wissen*;
-- met › open je de 12 maanden om afwijkende bedragen in te vullen
-  (bijv. vakantie in juli);
-- bovenaan het totaal van inkomsten, uitgaven, sparen en wat er niet begroot is.
+- budget **per maand** of **per jaar** invullen (het andere veld rekent mee);
+  Enter gaat naar de volgende categorie;
+- *Werkelijk*, *Verschil* en een balk voor de gekozen periode. Bij *Heel jaar*
+  vergelijkt het verschil met het budget van de maanden waarover je
+  transacties hebt ingelezen;
+- het gemiddelde per maand; tik erop om het over te nemen;
+- met › de 12 maanden voor afwijkende bedragen (bijv. vakantie in juli).
 
-Je kunt ook al budgetten maken voor volgend jaar.
+Verder: lege budgetten vullen met je gemiddelde, het budget van vorig jaar
+overnemen, een jaar wissen, en (in een maand) een budget alleen voor die maand
+wijzigen.
 
 ## Regels laten maken door Claude
 

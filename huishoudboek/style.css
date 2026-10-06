@@ -138,29 +138,45 @@ textarea.txt.area{width:100%;font:inherit;font-size:13px;line-height:1.4;resize:
 .sugg .rule{grid-template-columns:minmax(0,1fr) 13rem 3.5rem 6.5rem}
 @media (max-width:640px){ .sugg .rule{grid-template-columns:minmax(0,1fr) auto auto} .sugg .rule .pick{grid-column:1/-1} }
 /* budgetten */
-.brow{display:grid;grid-template-columns:minmax(0,1fr) 6.5rem 7rem 7rem 2.4rem;gap:4px 10px;align-items:center;padding:8px 16px;border-top:.5px solid var(--line)}
-.brow.head{border-top:0;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em;padding-top:13px}
-.brow.head span.h{font-family:var(--body);font-weight:500;font-size:12px;color:var(--muted);text-align:right;letter-spacing:0}
-.brow.sum{font-weight:600;background:var(--sunk)}
-.brow .name{min-width:0;overflow-wrap:anywhere;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center}
 .tag{font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 7px}
 input.bin{font:inherit;width:100%;min-width:0;text-align:right;font-variant-numeric:tabular-nums;border:1px solid transparent;border-radius:8px;background:var(--fill);color:var(--ink);padding:5px 8px}
 input.bin:focus{background:var(--surface);border-color:var(--accent)}
 .refbtn{font:inherit;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;border:0;background:none;color:var(--accent);padding:4px 0;cursor:pointer;justify-self:end}
 .refbtn:hover{text-decoration:underline}
 .muted{color:#aeaeb2}
-.brow .exp{padding:4px 0;width:2.2rem;justify-self:end}
 .bmwrap{padding:4px 16px 12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;background:var(--sunk)}
 .bmonths{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;width:100%}
 .bmonths label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
 .bmonths label.diff{color:var(--accent);font-weight:600}
 .bmonths label.diff input{border-color:var(--accent)}
 @media (max-width:640px){
-  .brow{grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1fr) 2.2rem}
-  .brow .name{grid-column:1/-1}
-  .brow.head span:first-child{grid-column:1/-1}
-  .brow.head span:last-child{display:none}
-  .bmonths{grid-template-columns:repeat(3,minmax(0,1fr))}
+          .bmonths{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 .yearseg{display:inline-flex;background:var(--fill);border-radius:9px;padding:2px;margin-right:4px}
 .yearseg .seg{font-variant-numeric:tabular-nums}
+/* overzicht met budget */
+.orow{display:grid;grid-template-columns:minmax(0,1fr) 6.6rem 6.6rem 6rem 6rem 5rem 2.4rem;grid-template-areas:"name pm pj act dif mtr exp";gap:4px 10px;align-items:center;padding:8px 16px;border-top:.5px solid var(--line)}
+.orow.head{border-top:0;padding-top:13px}
+.orow.head .name{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em}
+.orow .h{font-size:12px;font-weight:500;color:var(--muted);text-align:right}
+.orow.sum{font-weight:600;background:var(--sunk)}
+.oc.name{grid-area:name;min-width:0;overflow-wrap:anywhere;display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.oc.pm{grid-area:pm}.oc.pj{grid-area:pj}.oc.act{grid-area:act;text-align:right}.oc.dif{grid-area:dif;text-align:right}.oc.mtr{grid-area:mtr}.oc.exp{grid-area:exp;justify-self:end}
+.oc.exp .btn{padding:4px 0;width:2.2rem}
+.oc .ml{display:none}
+.oc.sum .num,.orow.sum .num{display:block}
+.cat-link{font:inherit;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:pointer}
+.cat-link::after{content:" ›";color:#c7c7cc;font-weight:600}
+.oc .sub{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center}
+.oc .sub:empty{display:none}
+.oc .refbtn{font-size:12px;padding:0;text-align:left;justify-self:start}
+.bmonths label.cur{color:var(--ink);font-weight:600}
+@media (max-width:640px){
+  .orow{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 2.2rem;grid-template-areas:"name name exp" "pm pj pj" "act dif dif" "mtr mtr mtr";gap:6px 10px}
+  .orow.head{grid-template-areas:"name name name"}
+  .orow.head .h,.orow.head .mtr,.orow.head .exp{display:none}
+  .orow.sum{grid-template-areas:"name name name" "pm pj pj" "act dif dif" "mtr mtr mtr"}
+  .oc .ml{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+  .oc.act,.oc.dif{text-align:left}
+  .oc.act .num,.oc.dif .num,.orow.sum .oc .num{text-align:left}
+}
