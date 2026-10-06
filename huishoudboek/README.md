@@ -36,6 +36,23 @@ profiel heeft eigen transacties, regels, budgetten, vermogen en back-ups. De
 app onthoudt welk profiel het laatst open stond. Profielen staan in `PROFILES`
 bovenin `app.js`.
 
+## Regels laten maken door Claude
+
+Bovenaan het tabblad *Regels*:
+
+1. **Vraag kopiëren** (of *Delen met Claude-app*): de app zet de tegenpartijen
+   zonder categorie, je bestaande regels en de vaste categorieën in één vraag.
+   Er gaan alleen namen, korte omschrijvingen en bedragen mee, geen
+   rekeningnummers.
+2. Plak die vraag in een chat met Claude (bijv. de Claude-app op je iPad).
+3. Plak het antwoord van Claude terug in de app en tik **Antwoord inlezen**.
+4. Controleer de voorstellen: per regel zie je hoeveel transacties hij raakt;
+   je kunt trefwoord en categorie aanpassen of een regel uitvinken.
+   Onbekende categorieën en bestaande regels staan standaard uit.
+5. **Regels toevoegen**: ze komen onderaan, zodat je eigen regels voorrang houden.
+
+Doe dit na elke nieuwe import om ook nieuwe winkels en partijen te laten indelen.
+
 ## Gegevens
 
 - Opslag: `localStorage` onder `hhb:<profiel>:*` (dezelfde indeling als het

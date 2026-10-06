@@ -133,3 +133,8 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.01
 .tablewrap{overflow-x:auto}
 .tablewrap .row.w5{min-width:560px}
 .save.err~.profiles{margin-left:auto}
+textarea.txt.area{width:100%;font:inherit;font-size:13px;line-height:1.4;resize:vertical;border-radius:10px;padding:8px 10px}
+.rule .pick{display:flex;gap:8px;align-items:center;min-width:0}
+.rule .pick input.txt{flex:1;min-width:0}
+.sugg .rule{grid-template-columns:minmax(0,1fr) 13rem 3.5rem 6.5rem}
+@media (max-width:640px){ .sugg .rule{grid-template-columns:minmax(0,1fr) auto auto} .sugg .rule .pick{grid-column:1/-1} }

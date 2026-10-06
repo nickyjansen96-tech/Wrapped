@@ -15,7 +15,7 @@ const TABS=["overzicht","vermogen","transacties","regels","importeren"];
 
 /* ---------- toestand ---------- */
 const S={ready:false,tx:[],months:{},rules:[],overrides:{},budgets:{},wealth:{},
-  tab:"overzicht",year:null,month:0,fCat:"",fText:"",fUnk:false,shown:100,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:""};
+  tab:"overzicht",year:null,month:0,fCat:"",fText:"",fUnk:false,shown:100,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""}};
 const $=s=>document.querySelector(s);
 const el=(tag,attrs={},...kids)=>{const e=document.createElement(tag);
   for(const[k,v]of Object.entries(attrs)){ if(k==="class")e.className=v; else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);
@@ -28,8 +28,10 @@ const f0=n=>Math.abs(n)<0.5?"–":eur0.format(n);
 /* ---------- categoriseren ---------- */
 const strip=s=>String(s).replace(/\s+/g,"").toLowerCase();
 let compiled=[];
-function compileRules(){ compiled=S.rules.filter(r=>r.k&&r.k.trim()).map(r=>{const k=strip(r.k);
-  return k.includes("*")?{re:new RegExp(k.split("*").map(p=>p.replace(/[.+?^${}()|[\]\\]/g,"\\$&")).join(".*")),c:r.c,r}:{k,c:r.c,r};});
+function compileOne(r){ const k=strip(r.k);
+  return k.includes("*")?{re:new RegExp(k.split("*").map(p=>p.replace(/[.+?^${}()|[\]\\]/g,"\\$&")).join(".*")),c:r.c,r}:{k,c:r.c,r}; }
+const matches=(c,t)=>{ const s=t.s||(t.s=strip(t.t)); return c.re?c.re.test(s):s.includes(c.k); };
+function compileRules(){ compiled=S.rules.filter(r=>r.k&&r.k.trim()).map(compileOne);
   for(const t of S.tx)t.auto=undefined; }
 function autoCat(t){ if(t.auto!==undefined)return t.auto; const s=t.s||(t.s=strip(t.t)); t.hit=null;
   for(const c of compiled){ if(c.re?c.re.test(s):s.includes(c.k)){t.hit=c.r;return t.auto=c.c;} } return t.auto=UNK; }
@@ -80,7 +82,7 @@ function loadDoc(id,v){ v=v||{};
   else if(id.startsWith("tx-"))S.months[id.slice(3)]=(v.rows||[]).map(r=>({i:String(r.i),d:+r.d,a:+r.a,t:String(r.t??"")})); }
 function indexTx(){ S.tx=Object.values(S.months).flat().sort((a,b)=>b.d-a.d); }
 function resetData(){ S.months={}; S.rules=[]; S.overrides={}; S.budgets={}; S.wealth={}; S.tx=[];
-  Object.assign(S,{year:null,month:0,fCat:"",fText:"",fUnk:false,shown:100,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:""}); }
+  Object.assign(S,{year:null,month:0,fCat:"",fText:"",fUnk:false,shown:100,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""}}); }
 function loadProfile(){ resetData();
   if(store.ok){ for(const id of store.keys())loadDoc(id,store.get(id)); }
   indexTx(); compileRules(); pickDefaults();
@@ -210,7 +212,77 @@ function viewTx(main){
   if(list.length>S.shown)main.append(el("button",{class:"btn",onclick:()=>{S.shown+=200;render();}},"Meer tonen ("+(list.length-S.shown)+" resterend)"));
 }
 
+/* ---------- regels laten maken door Claude ---------- */
+// Bouwt een vraag voor Claude met de tegenpartijen zonder categorie. Alleen naam, korte omschrijving,
+// aantal en bedragen gaan mee; geen rekeningnummers.
+function claudePrompt(){
+  const groups=new Map();
+  for(const t of S.tx){ if(catOf(t)!==UNK)continue; const [name,det]=who(t.t); const key=name.toLowerCase();
+    const g=groups.get(key)||{name,det:det.slice(0,60),n:0,sum:0,last:0}; g.n++; g.sum+=t.a; g.last=Math.max(g.last,t.d); groups.set(key,g); }
+  const list=[...groups.values()].sort((a,b)=>b.n-a.n||Math.abs(b.sum)-Math.abs(a.sum)).slice(0,200);
+  if(!list.length)return null;
+  const lines=list.map(g=>"- "+g.name+(g.det?" | "+g.det:"")+" | "+g.n+"× | totaal "+g.sum.toFixed(2).replace(".",","));
+  const cats=GROUPS.map(g=>g.name+": "+g.cats.join("; ")).join("\n");
+  const have=S.rules.length?S.rules.slice(0,150).map(r=>"- "+r.k+" → "+r.c).join("\n"):"(nog geen)";
+  return ["Ik gebruik een huishoudboekje-app voor mijn ABN AMRO-rekening. Wil je regels maken die mijn transacties automatisch in een categorie zetten?",
+    "","Zo werken regels: als het trefwoord in de omschrijving van een transactie staat, krijgt die transactie de categorie. Hoofdletters en spaties tellen niet mee; * is een joker (bijv. \"Albert*Heijn\"). Maak trefwoorden specifiek genoeg dat ze geen andere winkels raken, maar algemeen genoeg dat ze ook toekomstige transacties van dezelfde partij vangen (laat filiaalnummers en datums weg).",
+    "","Gebruik alleen deze categorieën, precies zo geschreven:",cats,
+    "","Bij de bedragen: min is geld eruit, plus is geld erin. Overboekingen naar eigen spaarrekeningen horen bij Buffer of Spaardoelen. Als je echt niet weet wat iets is, sla het dan over en noem het onder de JSON-code.",
+    "","Regels die ik al heb:",have,
+    "","Tegenpartijen zonder categorie (naam | omschrijving | aantal | totaal in euro):",...lines,
+    "","Geef je antwoord als één JSON-codeblok in deze vorm, zodat ik het in de app kan plakken:",
+    '```json\n{"regels":[{"trefwoord":"Albert Heijn","categorie":"Boodschappen"}]}\n```'].join("\n"); }
+function parseClaude(text){
+  const m=/```(?:json)?\s*([\s\S]*?)```/.exec(text); const raw=(m?m[1]:text).trim();
+  const from=raw.search(/[[{]/); if(from<0)return null;
+  let v; try{ v=JSON.parse(raw.slice(from)); }catch(e){ const end=Math.max(raw.lastIndexOf("}"),raw.lastIndexOf("]")); try{ v=JSON.parse(raw.slice(from,end+1)); }catch(e2){ return null; } }
+  const arr=Array.isArray(v)?v:(v.regels||v.rules||[]); if(!Array.isArray(arr))return null;
+  const byLower=new Map(ALLCATS.map(c=>[c.toLowerCase(),c])); const have=new Set(S.rules.map(r=>strip(r.k))); const seen=new Set(); const out=[];
+  for(const x of arr){ const k=String(x?.trefwoord??x?.k??x?.keyword??"").trim(), c=byLower.get(String(x?.categorie??x?.c??x?.category??"").trim().toLowerCase());
+    if(!k||strip(k).length<2)continue; const sk=strip(k); if(seen.has(sk))continue; seen.add(sk);
+    out.push({k,c:c||ALLCATS[0],ok:!!c&&!have.has(sk),known:have.has(sk),badCat:!c}); }
+  return out; }
+function suggestionHits(sg){ const c=compileOne(sg); let n=0; for(const t of S.tx) if(catOf(t)===UNK&&matches(c,t))n++; return n; }
+async function copyText(text){ try{ await navigator.clipboard.writeText(text); return true; }catch(e){ return false; } }
+function viewClaude(main){
+  const card=el("div",{class:"card"},el("h2",{},"Regels laten maken door Claude"));
+  const unk=S.tx.filter(t=>catOf(t)===UNK).length;
+  card.append(el("p",{class:"prose"},unk?"1. Kopieer de vraag met je "+unk+" transacties zonder categorie en plak hem in de Claude-app. 2. Kopieer het antwoord van Claude en plak het hieronder. 3. Controleer de voorstellen en voeg ze toe."
+    :"Alle transacties hebben een categorie. Lees nieuwe transacties in, dan kan Claude daar regels voor maken."));
+  const prompt=unk?claudePrompt():null;
+  if(prompt){ const tools=el("div",{class:"tools"});
+    tools.append(el("button",{class:"btn pri",onclick:async()=>{ const ok=await copyText(prompt); S.ai.msg=ok?"Gekopieerd. Open de Claude-app en plak de vraag in een nieuwe chat.":"Kopiëren lukte niet; selecteer de tekst hieronder en kopieer hem zelf."; S.ai.showPrompt=!ok; render(); }},"Vraag kopiëren"));
+    if(navigator.share)tools.append(el("button",{class:"btn",onclick:async()=>{ try{ await navigator.share({text:prompt}); }catch(e){} }},"Delen met Claude-app"));
+    tools.append(el("button",{class:"btn",onclick:()=>{S.ai.showPrompt=!S.ai.showPrompt;render();}},S.ai.showPrompt?"Vraag verbergen":"Vraag bekijken"));
+    card.append(tools);
+    if(S.ai.showPrompt)card.append(el("textarea",{class:"txt area",readonly:true,rows:8,"aria-label":"Vraag voor Claude",onfocus:e=>e.target.select()},prompt));
+    card.append(el("p",{class:"prose"},"Er gaan alleen namen van tegenpartijen, korte omschrijvingen en bedragen mee, geen rekeningnummers."));
+  }
+  const area=el("textarea",{class:"txt area",id:"ai-answer",rows:5,placeholder:"Plak hier het antwoord van Claude","aria-label":"Antwoord van Claude",oninput:e=>{S.ai.text=e.target.value;}},S.ai.text);
+  card.append(area,el("div",{class:"tools"},el("button",{class:"btn pri",onclick:()=>{ const sg=parseClaude(S.ai.text);
+      if(!sg||!sg.length){ S.ai.sugg=null; S.ai.msg="In dit antwoord staan geen regels die de app kan lezen. Vraag Claude om het antwoord als JSON-codeblok."; }
+      else{ for(const x of sg)x.hits=suggestionHits(x); S.ai.sugg=sg; S.ai.msg=""; } render(); }},"Antwoord inlezen"),
+    S.ai.text?el("button",{class:"btn",onclick:()=>{S.ai={text:"",sugg:null,msg:""};render();}},"Wissen"):null));
+  if(S.ai.msg)card.append(el("div",{class:"note info",role:"status"},S.ai.msg));
+  const sg=S.ai.sugg;
+  if(sg){ const sec=el("section",{class:"group sugg"});
+    for(const x of sg){ sec.append(el("div",{class:"rule"},
+      el("label",{class:"pick"},el("input",{type:"checkbox",checked:x.ok,onchange:e=>{x.ok=e.target.checked;render();}}),
+        el("input",{class:"txt",value:x.k,"aria-label":"Trefwoord",onchange:e=>{x.k=e.target.value;x.hits=suggestionHits(x);render();}})),
+      catSelect(x.c,v=>{x.c=v;x.badCat=false;}),
+      el("span",{class:"num",title:"Aantal transacties zonder categorie dat deze regel raakt"},x.hits+"×"),
+      el("span",{class:"prose"},x.known?"bestaat al":x.badCat?"kies categorie":x.hits?"":"raakt nu niets"))); }
+    const n=sg.filter(x=>x.ok&&x.k.trim()).length;
+    card.append(sec,el("div",{class:"tools"},el("button",{class:"btn pri",disabled:!n,onclick:()=>{
+      const add=sg.filter(x=>x.ok&&x.k.trim()).map(x=>({k:x.k.trim(),c:x.c})); const before=S.tx.filter(t=>catOf(t)===UNK).length;
+      S.rules.push(...add); compileRules(); saveRules(); const after=S.tx.filter(t=>catOf(t)===UNK).length;
+      S.ai={text:"",sugg:null,msg:add.length+" regels toegevoegd; "+(before-after)+" transacties hebben nu een categorie"+(after?", "+after+" nog niet.":".")}; render(); }},
+      n+" regels toevoegen"),el("span",{class:"prose"},"Nieuwe regels komen onderaan, zodat je bestaande regels voorrang houden.")));
+  }
+  main.append(card); }
+
 function viewRules(main){
+  viewClaude(main);
   for(const t of S.tx)autoCat(t); const hits=new Map(); for(const t of S.tx)if(t.hit)hits.set(t.hit,(hits.get(t.hit)||0)+1);
   main.append(el("p",{class:"prose"},"Een transactie krijgt de categorie van de ",el("b",{},"bovenste regel")," waarvan het trefwoord in de omschrijving staat. Spaties en hoofdletters tellen niet mee. Houd trefwoorden specifiek: \"Apple Pay AH\" werkt beter dan \"AH\"."));
   let nc=ALLCATS[0]; const nk=el("input",{class:"txt grow",id:"addrule-k",placeholder:"Nieuw trefwoord, bijvoorbeeld een winkelnaam"});
