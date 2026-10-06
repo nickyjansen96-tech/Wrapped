@@ -19,11 +19,21 @@ toestel (in de browser); er gaat niets naar een server.
 - **Android (Chrome):** open de pagina → menu ⋮ → *App installeren*.
 - **Computer (Chrome/Edge):** het installeer-icoon in de adresbalk.
 
+## Profielen
+
+Er zijn twee profielen, **Nicky** en **Heleen**, te kiezen rechtsboven. Elk
+profiel heeft eigen transacties, regels, budgetten, vermogen en back-ups. De
+app onthoudt welk profiel het laatst open stond. Profielen staan in `PROFILES`
+bovenin `app.js`.
+
 ## Gegevens
 
-- Opslag: `localStorage` onder de sleutels `hhb:*` (dezelfde indeling als het
-  artifact: `rules`, `overrides`, `budgets`, `wealth`, `tx-JJJJ-MM`).
-- Onder *Importeren en back-up* maak je een JSON-back-up en zet je die terug,
+- Opslag: `localStorage` onder `hhb:<profiel>:*` (dezelfde indeling als het
+  artifact: `rules`, `overrides`, `budgets`, `wealth`, `tx-JJJJ-MM`). Gegevens
+  van vóór de profielen worden automatisch naar Nicky verplaatst.
+- Profielen staan per toestel: wat op de ene telefoon staat, staat niet
+  vanzelf op de andere. Overzetten kan met een back-up.
+- Onder *Importeren en back-up* maak je per profiel een JSON-back-up en zet je die terug,
   bijvoorbeeld om naar een ander toestel over te stappen.
 - Een back-up-bestand (`.json`) kun je ook gewoon in het importvak slepen.
 

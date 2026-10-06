@@ -39,25 +39,32 @@ function who(d){ let m=/\/NAME\/([^/]*)/.exec(d)||/Naam: (.*?)(\s{2,}|Omschrijvi
   if(/^(BEA|GEA|eCom)/.test(d)){ const rest=d.slice(33); const i=rest.indexOf(",PAS"); return [(i>0?rest.slice(0,i):rest.slice(0,30)).trim(),d.slice(0,32).replace(/\s+/g," ").trim()]; }
   return [d.replace(/\s+/g," ").slice(0,40),""]; }
 
-/* ---------- opslag (lokaal op dit toestel) ---------- */
-const PREFIX="hhb:";
+/* ---------- profielen ---------- */
+const PROFILES=[{id:"nicky",name:"Nicky"},{id:"heleen",name:"Heleen"}];
+const LAST_PROFILE="hhb-profiel";
+let profile=(()=>{ try{ const p=localStorage.getItem(LAST_PROFILE); if(PROFILES.some(x=>x.id===p))return p; }catch(e){} return PROFILES[0].id; })();
+const profileName=()=>PROFILES.find(p=>p.id===profile).name;
+
+/* ---------- opslag (lokaal op dit toestel, per profiel) ---------- */
+const prefix=()=>"hhb:"+profile+":";
 const store={
-  ok:(()=>{ try{ localStorage.setItem(PREFIX+"probe","1"); localStorage.removeItem(PREFIX+"probe"); return true; }catch(e){ return false; } })(),
-  get(id){ try{ const v=localStorage.getItem(PREFIX+id); return v?JSON.parse(v):null; }catch(e){ return null; } },
-  set(id,data){ localStorage.setItem(PREFIX+id,JSON.stringify(data)); },
-  del(id){ try{ localStorage.removeItem(PREFIX+id); }catch(e){} },
-  keys(){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith(PREFIX))out.push(k.slice(PREFIX.length)); } }catch(e){} return out; }
+  ok:(()=>{ try{ localStorage.setItem("hhb-probe","1"); localStorage.removeItem("hhb-probe"); return true; }catch(e){ return false; } })(),
+  get(id){ try{ const v=localStorage.getItem(prefix()+id); return v?JSON.parse(v):null; }catch(e){ return null; } },
+  set(id,data){ localStorage.setItem(prefix()+id,JSON.stringify(data)); },
+  del(id){ try{ localStorage.removeItem(prefix()+id); }catch(e){} },
+  keys(){ const out=[],P=prefix(); try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith(P))out.push(k.slice(P.length)); } }catch(e){} return out; }
 };
-const timers={};
+// Gegevens van vóór de profielen (sleutels "hhb:rules", "hhb:tx-…") gaan naar het eerste profiel.
+function migrateLegacy(){ try{ const old=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith("hhb:")&&!k.slice(4).includes(":"))old.push(k); }
+  for(const k of old){ const to="hhb:"+PROFILES[0].id+":"+k.slice(4); if(localStorage.getItem(to)==null)localStorage.setItem(to,localStorage.getItem(k)); localStorage.removeItem(k); } }catch(e){} }
+// Wijzigingen worden kort gebundeld en dan weggeschreven; bij wisselen van profiel of sluiten van de app direct.
+const pend={}; let saveTimer=0;
 function setSave(msg,err){const s=$("#save"); s.textContent=msg; s.classList.toggle("err",!!err);}
-function save(docId,getData){ if(!store.ok)return;
-  clearTimeout(timers[docId]);
-  timers[docId]=setTimeout(()=>{ delete timers[docId];
-    try{ store.set(docId,getData()); if(!Object.keys(timers).length)setSave("Opgeslagen"); }
-    catch(e){ setSave(e&&e.name==="QuotaExceededError"?"Opslag is vol; maak een back-up en verwijder oude maanden.":"Niet opgeslagen. Probeer het opnieuw.",true); }
-  },300);
-  setSave("Opslaan…"); }
-function flushSaves(){ for(const id of Object.keys(timers)){ clearTimeout(timers[id]); delete timers[id]; } }
+function save(docId,getData){ if(!store.ok)return; pend[docId]=getData; clearTimeout(saveTimer); saveTimer=setTimeout(flushSaves,300); setSave("Opslaan…"); }
+function flushSaves(){ clearTimeout(saveTimer); const ids=Object.keys(pend); if(!ids.length)return;
+  try{ for(const id of ids){ store.set(id,pend[id]()); delete pend[id]; } setSave("Opgeslagen"); }
+  catch(e){ setSave(e&&e.name==="QuotaExceededError"?"Opslag is vol; maak een back-up en verwijder oude maanden.":"Niet opgeslagen. Probeer het opnieuw.",true); } }
+function dropSaves(){ clearTimeout(saveTimer); for(const id of Object.keys(pend))delete pend[id]; }
 const saveOverrides=()=>save("overrides",()=>({map:S.overrides}));
 const saveRules=()=>save("rules",()=>({list:S.rules.map(r=>({k:r.k,c:r.c}))}));
 const saveWealth=()=>save("wealth",()=>({years:S.wealth}));
@@ -72,11 +79,20 @@ function loadDoc(id,v){ v=v||{};
   else if(id==="budgets")S.budgets=JSON.parse(JSON.stringify(v.years||{}));
   else if(id.startsWith("tx-"))S.months[id.slice(3)]=(v.rows||[]).map(r=>({i:String(r.i),d:+r.d,a:+r.a,t:String(r.t??"")})); }
 function indexTx(){ S.tx=Object.values(S.months).flat().sort((a,b)=>b.d-a.d); }
-function boot(){
+function resetData(){ S.months={}; S.rules=[]; S.overrides={}; S.budgets={}; S.wealth={}; S.tx=[];
+  Object.assign(S,{year:null,month:0,fCat:"",fText:"",fUnk:false,shown:100,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:""}); }
+function loadProfile(){ resetData();
   if(store.ok){ for(const id of store.keys())loadDoc(id,store.get(id)); }
-  else setSave("Opslaan is in deze browser niet beschikbaar; wijzigingen blijven niet bewaard.",true);
+  indexTx(); compileRules(); pickDefaults();
+  document.title="Huishoudboek · "+profileName(); }
+function switchProfile(id){ if(id===profile)return; flushSaves(); profile=id;
+  try{ localStorage.setItem(LAST_PROFILE,id); }catch(e){}
+  loadProfile(); if(!S.tx.length)S.tab="importeren"; setSave(""); go(); }
+function boot(){
+  migrateLegacy(); loadProfile();
+  if(!store.ok)setSave("Opslaan is in deze browser niet beschikbaar; wijzigingen blijven niet bewaard.",true);
   try{ navigator.storage?.persist?.(); }catch(e){}
-  indexTx(); compileRules(); pickDefaults(); S.ready=true;
+  S.ready=true;
   const h=location.hash.slice(1); if(TABS.includes(h))S.tab=h;
   if(!S.tx.length)S.tab="importeren";
   render();
@@ -107,10 +123,11 @@ const actual=(g,v)=>g.kind==="in"?v:-v;
 function render(){
   for(const b of document.querySelectorAll("#tabs button"))b.setAttribute("aria-selected",b.dataset.tab===S.tab);
   $("#navlabel").textContent=document.querySelector('#tabs button[data-tab="'+S.tab+'"]').textContent;
-  renderRail(); const main=$("#main"); main.replaceChildren();
+  renderProfiles(); renderRail(); const main=$("#main"); main.replaceChildren();
   if(!S.ready){main.append(el("div",{class:"empty"},"Gegevens laden…"));return;}
   ({overzicht:viewOverview,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport})[S.tab](main);
 }
+function renderProfiles(){ const box=$("#profiles"); box.replaceChildren(...PROFILES.map(p=>el("button",{class:"seg","aria-pressed":p.id===profile,onclick:()=>switchProfile(p.id)},p.name))); }
 function renderRail(){ const rail=$("#rail"); rail.replaceChildren(); rail.hidden=S.tab==="regels"||S.tab==="importeren"||!S.tx.length; if(rail.hidden)return;
   const ys=years(); const sel=el("select",{id:"year","aria-label":"Jaar",onchange:e=>{S.year=+e.target.value;S.shown=100;render();}},ys.map(y=>el("option",{value:y,selected:y===S.year},y)));
   rail.append(sel); if(S.tab==="vermogen")return; const {cnt}=totals(S.year);
@@ -301,14 +318,14 @@ async function importFile(file){
   render(); }
 
 /* ---------- back-up ---------- */
-function backupData(){ return {app:"huishoudboek",version:1,exported:new Date().toISOString(),
+function backupData(){ return {app:"huishoudboek",version:1,profile:profileName(),exported:new Date().toISOString(),
   rules:S.rules.map(r=>({k:r.k,c:r.c})),overrides:S.overrides,budgets:S.budgets,wealth:S.wealth,
   months:Object.fromEntries(Object.entries(S.months).map(([k,rows])=>[k,rows.map(t=>({i:t.i,d:t.d,a:t.a,t:t.t}))]))}; }
 async function exportBackup(){
-  const name="huishoudboek-"+new Date().toISOString().slice(0,10)+".json";
+  flushSaves(); const name="huishoudboek-"+profile+"-"+new Date().toISOString().slice(0,10)+".json";
   const blob=new Blob([JSON.stringify(backupData())],{type:"application/json"});
   try{ const file=new File([blob],name,{type:"application/json"});
-    if(navigator.canShare&&navigator.canShare({files:[file]})&&matchMedia("(pointer:coarse)").matches){ await navigator.share({files:[file],title:"Huishoudboek back-up"}); S.backupMsg="Back-up gedeeld."; render(); return; }
+    if(navigator.canShare&&navigator.canShare({files:[file]})&&matchMedia("(pointer:coarse)").matches){ await navigator.share({files:[file],title:"Huishoudboek back-up "+profileName()}); S.backupMsg="Back-up gedeeld."; render(); return; }
   }catch(e){ if(e&&e.name==="AbortError")return; }
   const a=el("a",{href:URL.createObjectURL(blob),download:name}); document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
   S.backupMsg="Back-up opgeslagen als "+name+"."; render(); }
@@ -316,13 +333,14 @@ async function restoreBackup(file){
   let v; try{ v=JSON.parse(await file.text()); }catch(e){ S.backupMsg="Dit is geen geldige back-up."; render(); return; }
   if(!v||typeof v!=="object"||!v.months||typeof v.months!=="object"){ S.backupMsg="Dit bestand is geen Huishoudboek-back-up."; render(); return; }
   const n=Object.values(v.months).reduce((s,r)=>s+(Array.isArray(r)?r.length:0),0);
-  if(S.tx.length&&!confirm("Je huidige gegevens ("+S.tx.length+" transacties) worden vervangen door de back-up ("+n+" transacties). Doorgaan?"))return;
-  flushSaves(); for(const id of store.keys())store.del(id);
-  S.months={}; S.rules=[]; S.overrides={}; S.budgets={}; S.wealth={};
+  const from=v.profile&&v.profile!==profileName()?" Let op: deze back-up is gemaakt in het profiel "+v.profile+".":"";
+  if((S.tx.length||from)&&!confirm("De gegevens van "+profileName()+" ("+S.tx.length+" transacties) worden vervangen door de back-up ("+n+" transacties)."+from+" Doorgaan?"))return;
+  dropSaves(); for(const id of store.keys())store.del(id);
+  resetData();
   loadDoc("rules",{list:v.rules||[]}); loadDoc("overrides",{map:v.overrides||{}}); loadDoc("budgets",{years:v.budgets||{}}); loadDoc("wealth",{years:v.wealth||{}});
   for(const [k,rows] of Object.entries(v.months)) if(/^\d{4}-\d{2}$/.test(k)&&Array.isArray(rows))loadDoc("tx-"+k,{rows});
   indexTx(); compileRules(); pickDefaults(); saveAll();
-  S.backupMsg="Back-up teruggezet: "+S.tx.length+" transacties en "+S.rules.length+" regels."; render(); }
+  S.backupMsg="Back-up teruggezet in "+profileName()+": "+S.tx.length+" transacties en "+S.rules.length+" regels."; render(); }
 
 function viewImport(main){
   const inp=el("input",{type:"file",id:"file",accept:".xls,.xlsx,.csv,.txt,.tab",hidden:true,onchange:e=>{if(e.target.files[0])importFile(e.target.files[0]);e.target.value="";}});
@@ -332,10 +350,10 @@ function viewImport(main){
     el("button",{class:"btn pri",onclick:()=>inp.click()},"Bestand kiezen"),inp);
   main.append(drop);
   if(S.importMsg)main.append(el("div",{class:"note info",role:"status"},S.importMsg, S.tx.length?el("button",{class:"btn sm",onclick:()=>{S.tab="overzicht";go();}},"Naar overzicht"):null));
-  main.append(el("p",{class:"prose"},"Je mag overlappende periodes inlezen: transacties die er al in staan worden herkend en overgeslagen. Je gegevens blijven op dit toestel, in deze browser; er gaat niets naar een server."));
+  main.append(el("p",{class:"prose"},"Je mag overlappende periodes inlezen: transacties die er al in staan worden herkend en overgeslagen. Je gegevens blijven op dit toestel, in deze browser; er gaat niets naar een server. Elk profiel heeft zijn eigen transacties, regels, budgetten en vermogen."));
 
   const binp=el("input",{type:"file",id:"bfile",accept:".json,application/json",hidden:true,onchange:e=>{if(e.target.files[0])restoreBackup(e.target.files[0]);e.target.value="";}});
-  main.append(el("div",{class:"card"},el("h2",{},"Back-up"),
+  main.append(el("div",{class:"card"},el("h2",{},"Back-up van "+profileName()),
     el("p",{class:"prose"},"Omdat alles alleen op dit toestel staat, raakt het weg als je de browsergegevens wist of de app verwijdert. Maak af en toe een back-up, of gebruik er een om je gegevens naar een ander toestel over te zetten."),
     el("div",{class:"tools"},el("button",{class:"btn pri",disabled:!S.tx.length&&!S.rules.length,onclick:exportBackup},"Back-up maken"),el("button",{class:"btn",onclick:()=>binp.click()},"Back-up terugzetten"),binp),
     S.backupMsg?el("div",{class:"note info",role:"status"},S.backupMsg):null));
@@ -351,5 +369,6 @@ $("#navbtn").addEventListener("click",e=>{e.stopPropagation();navOpen($("#tabs")
 $("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]");if(b){S.tab=b.dataset.tab;navOpen(false);go();}});
 document.addEventListener("click",e=>{if(!e.target.closest(".navwrap"))navOpen(false);});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#tabs").hidden){navOpen(false);$("#navbtn").focus();}});
+addEventListener("pagehide",flushSaves); document.addEventListener("visibilitychange",()=>{if(document.hidden)flushSaves();});
 if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 boot();

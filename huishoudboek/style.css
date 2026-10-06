@@ -18,6 +18,10 @@ header.top{position:sticky;top:0;z-index:5;padding-top:env(safe-area-inset-top,0
 .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-block:8px}
 h1{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.01em;margin:0}
 .save{font-size:12px;color:var(--muted);margin-left:auto}
+.save.err{flex-basis:100%;order:9}
+.profiles{display:inline-flex;background:var(--fill);border-radius:9px;padding:2px}
+.seg{font:inherit;font-size:13px;font-weight:500;border:0;background:none;color:var(--ink);padding:4px 12px;border-radius:7px;cursor:pointer}
+.seg[aria-pressed="true"]{background:var(--surface);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
 .save.err{color:var(--bad)}
 .navwrap{position:relative}
 .navbtn{font:inherit;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:7px;border:0;background:var(--fill);color:var(--ink);padding:5px 12px;border-radius:999px;cursor:pointer}
@@ -128,3 +132,4 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-.01
 .starts input{font:inherit;color:var(--ink);background:var(--fill);border:0;border-radius:9px;padding:7px 10px;font-variant-numeric:tabular-nums}
 .tablewrap{overflow-x:auto}
 .tablewrap .row.w5{min-width:560px}
+.save.err~.profiles{margin-left:auto}
