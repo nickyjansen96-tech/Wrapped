@@ -11,12 +11,12 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="9";
+const APP_VERSION="10";
 const TABS=["overzicht","vermogen","transacties","regels","importeren"];
 
 /* ---------- toestand ---------- */
 const S={ready:false,tx:[],months:{},rules:[],overrides:{},budgets:{},wealth:{},
-  tab:"overzicht",year:null,month:0,fCat:"",fText:"",fUnk:false,shown:100,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""}};
+  tab:"overzicht",year:null,month:0,fCat:"",fText:"",fUnk:false,shown:50,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""}};
 const $=s=>document.querySelector(s);
 const el=(tag,attrs={},...kids)=>{const e=document.createElement(tag);
   for(const[k,v]of Object.entries(attrs)){ if(k==="class")e.className=v; else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);
@@ -39,7 +39,7 @@ function autoCat(t){ if(t.auto!==undefined)return t.auto; const s=t.s||(t.s=stri
 const catOf=t=>S.overrides[t.i]||autoCat(t);
 function who(d){ let m=/\/NAME\/([^/]*)/.exec(d)||/Naam: (.*?)(\s{2,}|Omschrijving|$)/.exec(d);
   if(m){ const o=/(?:Omschrijving: |\/REMI\/)(.*?)(?:\s{2,}|\/|Kenmerk:|$)/.exec(d); return [m[1].trim(),o?o[1].trim():""]; }
-  if(/^(BEA|GEA|eCom)/.test(d)){ const rest=d.slice(33); const i=rest.indexOf(",PAS"); return [(i>0?rest.slice(0,i):rest.slice(0,30)).trim(),d.slice(0,32).replace(/\s+/g," ").trim()]; }
+  if(/^(BEA|GEA|eCom)/.test(d)){ const rest=d.slice(33); const i=rest.indexOf(",PAS"); return [(i>0?rest.slice(0,i):rest.slice(0,30)).trim(),""]; }
   return [d.replace(/\s+/g," ").slice(0,40),""]; }
 
 /* ---------- profielen ---------- */
@@ -83,7 +83,7 @@ function loadDoc(id,v){ v=v||{};
   else if(id.startsWith("tx-"))S.months[id.slice(3)]=(v.rows||[]).map(r=>({i:String(r.i),d:+r.d,a:+r.a,t:String(r.t??"")})); }
 function indexTx(){ S.tx=Object.values(S.months).flat().sort((a,b)=>b.d-a.d); }
 function resetData(){ S.months={}; S.rules=[]; S.overrides={}; S.budgets={}; S.wealth={}; S.tx=[];
-  Object.assign(S,{year:null,month:0,fCat:"",fText:"",fUnk:false,shown:100,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""}}); }
+  Object.assign(S,{year:null,month:0,fCat:"",fText:"",fUnk:false,shown:50,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""},editBudget:false,showEmpty:false,bOpen:null}); }
 function loadProfile(){ resetData();
   if(store.ok){ for(const id of store.keys())loadDoc(id,store.get(id)); }
   indexTx(); compileRules(); pickDefaults();
@@ -141,9 +141,9 @@ function renderRail(){ const rail=$("#rail"); rail.replaceChildren();
   rail.hidden=S.tab==="regels"||S.tab==="importeren"||(!ov&&!S.tx.length); if(rail.hidden)return;
   // Op het overzicht kun je ook jaren zonder transacties kiezen (bijv. volgend jaar), om alvast te begroten.
   const ys=ov?budgetYears():years().slice().reverse(); if(!ys.includes(S.year))S.year=ov?(years()[0]||new Date().getFullYear()):ys[ys.length-1];
-  rail.append(yearSwitch(ys,y=>{S.year=y;S.shown=100;render();})); if(S.tab==="vermogen")return; const {cnt}=totals(S.year);
-  rail.append(el("button",{class:"chip","aria-pressed":S.month===0,onclick:()=>{S.month=0;S.shown=100;render();}},"Heel jaar"));
-  MONTHS.forEach((n,i)=>rail.append(el("button",{class:"chip"+(cnt[i+1]?"":" off"),"aria-pressed":S.month===i+1,onclick:()=>{S.month=i+1;S.shown=100;render();}},n)));
+  rail.append(yearSwitch(ys,y=>{S.year=y;S.shown=50;render();})); if(ov&&S.editBudget)return; if(S.tab==="vermogen")return; const {cnt}=totals(S.year);
+  rail.append(el("button",{class:"chip","aria-pressed":S.month===0,onclick:()=>{S.month=0;S.shown=50;render();}},"Heel jaar"));
+  MONTHS.forEach((n,i)=>rail.append(el("button",{class:"chip"+(cnt[i+1]?"":" off"),"aria-pressed":S.month===i+1,onclick:()=>{S.month=i+1;S.shown=50;render();}},n)));
 }
 function periodLabel(){ return S.month?MONTHS_LONG[S.month-1]+" "+S.year:"heel "+S.year; }
 
@@ -155,36 +155,38 @@ function meter(grp,a,b){ if(!b)return el("div",{class:"meter none",role:"img","a
   return el("div",{class:"meter"+(over?" over":""),role:"img","aria-label":Math.round(p*100)+"% van budget"},el("i",{style:"width:"+Math.min(100,p*100)+"%"})); }
 
 function catSelect(value,onchange,opts={}){ const s=el("select",{class:"cat"+(opts.cls?" "+opts.cls:""),"aria-label":"Categorie",onchange:e=>onchange(e.target.value)});
-  if(opts.auto)s.append(el("option",{value:""},"Automatisch: "+opts.auto));
+  if(opts.auto)s.append(el("option",{value:"",title:"Automatisch via een regel"},opts.auto===UNK?"Kies categorie":opts.auto));
   for(const g of GROUPS){ const og=el("optgroup",{label:g.name}); for(const c of g.cats)og.append(el("option",{value:c,selected:c===value},c)); s.append(og); }
   if(opts.auto&&!value)s.value=""; return s; }
 
 function viewTx(main){
   const m=S.month,q=strip(S.fText);
-  const list=S.tx.filter(t=>Math.floor(t.d/10000)===S.year&&(!m||Math.floor(t.d/100)%100===m)&&(!S.fUnk||catOf(t)===UNK)&&(!S.fCat||catOf(t)===S.fCat)&&(!q||(t.s||(t.s=strip(t.t))).includes(q)));
-  const fsel=el("select",{id:"fcat","aria-label":"Filter op categorie",onchange:e=>{S.fCat=e.target.value;S.shown=100;render();}},el("option",{value:""},"Alle categorieën"),
+  const inPeriod=S.tx.filter(t=>Math.floor(t.d/10000)===S.year&&(!m||Math.floor(t.d/100)%100===m));
+  const unkCount=inPeriod.filter(t=>catOf(t)===UNK).length;
+  const list=inPeriod.filter(t=>(!S.fUnk||catOf(t)===UNK)&&(!S.fCat||catOf(t)===S.fCat)&&(!q||(t.s||(t.s=strip(t.t))).includes(q)));
+  const fsel=el("select",{id:"fcat","aria-label":"Filter op categorie",onchange:e=>{S.fCat=e.target.value;S.shown=50;render();}},el("option",{value:""},"Alle categorieën"),
     GROUPS.map(g=>el("optgroup",{label:g.name},g.cats.map(c=>el("option",{value:c,selected:c===S.fCat},c)))));
   main.append(el("div",{class:"tools field"},
-    el("input",{id:"ftext",class:"grow",type:"search",placeholder:"Zoek in omschrijving",value:S.fText,oninput:e=>{S.fText=e.target.value;S.shown=100;clearTimeout(viewTx.t);viewTx.t=setTimeout(()=>{render();const i=$("#ftext");i.focus();i.setSelectionRange(i.value.length,i.value.length);},250);}}),
-    fsel, el("label",{},el("input",{type:"checkbox",id:"funk",checked:S.fUnk,onchange:e=>{S.fUnk=e.target.checked;S.shown=100;render();}}),"Alleen zonder categorie")));
+    el("input",{id:"ftext",class:"grow",type:"search",placeholder:"Zoeken",value:S.fText,oninput:e=>{S.fText=e.target.value;S.shown=50;clearTimeout(viewTx.t);viewTx.t=setTimeout(()=>{render();const i=$("#ftext");i.focus();i.setSelectionRange(i.value.length,i.value.length);},250);}}),
+    fsel, (unkCount||S.fUnk)?el("button",{class:"chip toggle",id:"funk","aria-pressed":S.fUnk,onclick:()=>{S.fUnk=!S.fUnk;S.shown=50;render();}},"Zonder categorie ("+unkCount+")"):null));
   const sum=list.reduce((s,t)=>s+t.a,0);
-  main.append(el("div",{class:"prose"},list.length+" transacties in "+periodLabel()+", samen "+eur2.format(sum)+"."));
   if(!list.length){main.append(el("div",{class:"empty"},"Geen transacties voor deze selectie."));return;}
   const sec=el("section",{class:"group"});
+  sec.append(el("div",{class:"ghead"},el("span",{},list.length+" transacties"),el("span",{class:"num"},eur2.format(sum))));
   for(const t of list.slice(0,S.shown)){ const [name,det]=who(t.t); const auto=autoCat(t),man=S.overrides[t.i]||"";
     const sel=catSelect(man,v=>{ if(v)S.overrides[t.i]=v; else delete S.overrides[t.i]; saveOverrides(); render(); },{auto,cls:man?"man":auto===UNK?"unk":""});
     const d=String(t.d); const row=el("div",{class:"tx"},
-      el("span",{class:"date"},d.slice(6)+"-"+d.slice(4,6)+"-"+d.slice(2,4)),
+      el("span",{class:"date"},d.slice(6)+"-"+d.slice(4,6)),
       el("div",{class:"txt"},el("div",{class:"who"},name),det?el("div",{class:"det"},det):null),
       el("span",{class:"num amt "+(t.a<0?"":"pos")},eur2.format(t.a)), sel,
-      el("button",{class:"btn sm",title:"Maak een regel zodat dit voortaan automatisch gaat",onclick:()=>{S.ruleFor=S.ruleFor===t.i?null:t.i;render();}},"Regel"));
-    if(S.ruleFor===t.i){ const kin=el("input",{class:"txt grow",id:"newrule-k",value:name,"aria-label":"Trefwoord"}); let rc=catOf(t)===UNK?ALLCATS[0]:catOf(t);
-      row.append(el("div",{class:"mk"},"Als de omschrijving dit bevat:",kin,"dan",catSelect(rc,v=>{rc=v;}),
-        el("button",{class:"btn sm pri",onclick:()=>{ const k=kin.value.trim(); if(!k)return; S.rules.unshift({k,c:rc}); compileRules(); saveRules(); S.ruleFor=null; render(); }},"Regel opslaan")));
+      el("button",{class:"icon","aria-label":"Regel maken voor "+name,title:"Regel maken: voortaan automatisch deze categorie","aria-expanded":S.ruleFor===t.i,onclick:()=>{S.ruleFor=S.ruleFor===t.i?null:t.i;render();}},"+"));
+    if(S.ruleFor===t.i){ const kin=el("input",{class:"txt grow",id:"newrule-k",value:name,"aria-label":"Trefwoord"}); let rc=catOf(t)===UNK?"":catOf(t);
+      row.append(el("div",{class:"mk"},"Altijd",catSelect(rc,v=>{rc=v;},{auto:UNK}),"als de omschrijving bevat:",kin,
+        el("button",{class:"btn sm pri",onclick:()=>{ const k=kin.value.trim(); if(!k||!rc){ if(!rc)alert("Kies eerst een categorie."); return; } S.rules.unshift({k,c:rc}); compileRules(); saveRules(); S.ruleFor=null; render(); }},"Opslaan")));
     }
     sec.append(row); }
   main.append(sec);
-  if(list.length>S.shown)main.append(el("button",{class:"btn",onclick:()=>{S.shown+=200;render();}},"Meer tonen ("+(list.length-S.shown)+" resterend)"));
+  if(list.length>S.shown)main.append(el("button",{class:"linkbtn",onclick:()=>{S.shown+=200;render();}},"Meer tonen ("+(list.length-S.shown)+")"));
 }
 
 /* ---------- regels laten maken door Claude ---------- */
@@ -220,58 +222,54 @@ function parseClaude(text){
 function suggestionHits(sg){ const c=compileOne(sg); let n=0; for(const t of S.tx) if(catOf(t)===UNK&&matches(c,t))n++; return n; }
 async function copyText(text){ try{ await navigator.clipboard.writeText(text); return true; }catch(e){ return false; } }
 function viewClaude(main){
-  const card=el("div",{class:"card"},el("h2",{},"Regels laten maken door Claude"));
-  const unk=S.tx.filter(t=>catOf(t)===UNK).length;
-  card.append(el("p",{class:"prose"},unk?"1. Kopieer de vraag met je "+unk+" transacties zonder categorie en plak hem in de Claude-app. 2. Kopieer het antwoord van Claude en plak het hieronder. 3. Controleer de voorstellen en voeg ze toe."
-    :"Alle transacties hebben een categorie. Lees nieuwe transacties in, dan kan Claude daar regels voor maken."));
-  const prompt=unk?claudePrompt():null;
-  if(prompt){ const tools=el("div",{class:"tools"});
-    tools.append(el("button",{class:"btn pri",onclick:async()=>{ const ok=await copyText(prompt); S.ai.msg=ok?"Gekopieerd. Open de Claude-app en plak de vraag in een nieuwe chat.":"Kopiëren lukte niet; selecteer de tekst hieronder en kopieer hem zelf."; S.ai.showPrompt=!ok; render(); }},"Vraag kopiëren"));
-    if(navigator.share)tools.append(el("button",{class:"btn",onclick:async()=>{ try{ await navigator.share({text:prompt}); }catch(e){} }},"Delen met Claude-app"));
-    tools.append(el("button",{class:"btn",onclick:()=>{S.ai.showPrompt=!S.ai.showPrompt;render();}},S.ai.showPrompt?"Vraag verbergen":"Vraag bekijken"));
-    card.append(tools);
-    if(S.ai.showPrompt)card.append(el("textarea",{class:"txt area",readonly:true,rows:8,"aria-label":"Vraag voor Claude",onfocus:e=>e.target.select()},prompt));
-    card.append(el("p",{class:"prose"},"Er gaan alleen namen van tegenpartijen, korte omschrijvingen en bedragen mee, geen rekeningnummers."));
-  }
-  const area=el("textarea",{class:"txt area",id:"ai-answer",rows:5,placeholder:"Plak hier het antwoord van Claude","aria-label":"Antwoord van Claude",oninput:e=>{S.ai.text=e.target.value;}},S.ai.text);
-  card.append(area,el("div",{class:"tools"},el("button",{class:"btn pri",onclick:()=>{ const sg=parseClaude(S.ai.text);
-      if(!sg||!sg.length){ S.ai.sugg=null; S.ai.msg="In dit antwoord staan geen regels die de app kan lezen. Vraag Claude om het antwoord als JSON-codeblok."; }
-      else{ for(const x of sg)x.hits=suggestionHits(x); S.ai.sugg=sg; S.ai.msg=""; } render(); }},"Antwoord inlezen"),
-    S.ai.text?el("button",{class:"btn",onclick:()=>{S.ai={text:"",sugg:null,msg:""};render();}},"Wissen"):null));
+  const unk=S.tx.filter(t=>catOf(t)===UNK).length, prompt=unk?claudePrompt():null, sg=S.ai.sugg;
+  const card=el("div",{class:"card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Laat Claude regels maken"),
+    el("div",{class:"prose"},unk?unk+" transacties hebben nog geen categorie.":"Alle transacties hebben een categorie."))));
+  if(prompt||S.ai.open){ const tools=el("div",{class:"tools"});
+    if(prompt)tools.append(el("button",{class:"btn pri",onclick:async()=>{ const ok=await copyText(prompt); S.ai.msg=ok?"Gekopieerd. Plak de vraag in een nieuwe chat in de Claude-app en kopieer het antwoord.":"Kopiëren lukte niet; kopieer de vraag hieronder zelf."; S.ai.showPrompt=!ok; S.ai.open=true; render(); }},"1. Vraag kopiëren"));
+    tools.append(el("button",{class:"btn"+(S.ai.open?" on":""),onclick:()=>{S.ai.open=!S.ai.open;render();}},"2. Antwoord plakken"));
+    if(prompt)tools.append(el("button",{class:"linkbtn",onclick:()=>{S.ai.showPrompt=!S.ai.showPrompt;render();}},S.ai.showPrompt?"Vraag verbergen":"Wat wordt gedeeld?"));
+    card.append(tools); }
+  if(S.ai.showPrompt&&prompt)card.append(el("p",{class:"prose"},"Alleen namen, korte omschrijvingen en bedragen; geen rekeningnummers."),el("textarea",{class:"txt area",readonly:true,rows:8,"aria-label":"Vraag voor Claude",onfocus:e=>e.target.select()},prompt));
   if(S.ai.msg)card.append(el("div",{class:"note info",role:"status"},S.ai.msg));
-  const sg=S.ai.sugg;
+  if(S.ai.open&&!sg){ card.append(el("textarea",{class:"txt area",id:"ai-answer",rows:4,placeholder:"Plak hier het antwoord van Claude","aria-label":"Antwoord van Claude",oninput:e=>{S.ai.text=e.target.value;}},S.ai.text),
+    el("div",{class:"tools"},el("button",{class:"btn pri",onclick:()=>{ const r=parseClaude(S.ai.text);
+      if(!r||!r.length){ S.ai.msg="Hierin staan geen regels die de app kan lezen. Vraag Claude om het antwoord als JSON-codeblok."; }
+      else{ for(const x of r)x.hits=suggestionHits(x); S.ai.sugg=r; S.ai.msg=""; } render(); }},"Inlezen"))); }
   if(sg){ const sec=el("section",{class:"group sugg"});
     for(const x of sg){ sec.append(el("div",{class:"rule"},
-      el("label",{class:"pick"},el("input",{type:"checkbox",checked:x.ok,onchange:e=>{x.ok=e.target.checked;render();}}),
+      el("label",{class:"pick"},el("input",{type:"checkbox",checked:x.ok,"aria-label":"Regel gebruiken",onchange:e=>{x.ok=e.target.checked;render();}}),
         el("input",{class:"txt",value:x.k,"aria-label":"Trefwoord",onchange:e=>{x.k=e.target.value;x.hits=suggestionHits(x);render();}})),
       catSelect(x.c,v=>{x.c=v;x.badCat=false;}),
-      el("span",{class:"num",title:"Aantal transacties zonder categorie dat deze regel raakt"},x.hits+"×"),
-      el("span",{class:"prose"},x.known?"bestaat al":x.badCat?"kies categorie":x.hits?"":"raakt nu niets"))); }
+      el("span",{class:"num muted",title:x.known?"Bestaat al":x.badCat?"Kies een categorie":"Aantal transacties zonder categorie dat deze regel raakt"},x.known?"bestaat":x.badCat?"?":x.hits+"×"))); }
     const n=sg.filter(x=>x.ok&&x.k.trim()).length;
     card.append(sec,el("div",{class:"tools"},el("button",{class:"btn pri",disabled:!n,onclick:()=>{
       const add=sg.filter(x=>x.ok&&x.k.trim()).map(x=>({k:x.k.trim(),c:x.c})); const before=S.tx.filter(t=>catOf(t)===UNK).length;
       S.rules.push(...add); compileRules(); saveRules(); const after=S.tx.filter(t=>catOf(t)===UNK).length;
-      S.ai={text:"",sugg:null,msg:add.length+" regels toegevoegd; "+(before-after)+" transacties hebben nu een categorie"+(after?", "+after+" nog niet.":".")}; render(); }},
-      n+" regels toevoegen"),el("span",{class:"prose"},"Nieuwe regels komen onderaan, zodat je bestaande regels voorrang houden.")));
+      S.ai={text:"",sugg:null,msg:add.length+(add.length===1?" regel":" regels")+" toegevoegd; "+(before-after)+" transacties ingedeeld"+(after?", "+after+" nog niet.":".")}; render(); }},
+      n+(n===1?" regel":" regels")+" toevoegen"),el("button",{class:"btn",onclick:()=>{S.ai={text:"",sugg:null,msg:"",open:true};render();}},"Annuleren")));
   }
   main.append(card); }
 
 function viewRules(main){
   viewClaude(main);
   for(const t of S.tx)autoCat(t); const hits=new Map(); for(const t of S.tx)if(t.hit)hits.set(t.hit,(hits.get(t.hit)||0)+1);
-  main.append(el("p",{class:"prose"},"Een transactie krijgt de categorie van de ",el("b",{},"bovenste regel")," waarvan het trefwoord in de omschrijving staat. Spaties en hoofdletters tellen niet mee. Houd trefwoorden specifiek: \"Apple Pay AH\" werkt beter dan \"AH\"."));
-  let nc=ALLCATS[0]; const nk=el("input",{class:"txt grow",id:"addrule-k",placeholder:"Nieuw trefwoord, bijvoorbeeld een winkelnaam"});
-  main.append(el("div",{class:"tools"},nk,catSelect(nc,v=>{nc=v;}),el("button",{class:"btn pri",onclick:()=>{const k=nk.value.trim();if(!k)return;S.rules.unshift({k,c:nc});compileRules();saveRules();render();}},"Regel toevoegen")));
-  main.append(el("div",{class:"tools field"},el("input",{id:"rfilter",class:"grow",type:"search",placeholder:"Zoek in "+S.rules.length+" regels",value:S.rFilter,oninput:e=>{S.rFilter=e.target.value;clearTimeout(viewRules.t);viewRules.t=setTimeout(()=>{render();const i=$("#rfilter");i.focus();i.setSelectionRange(i.value.length,i.value.length);},250);}})));
+  let nc=""; const nk=el("input",{class:"txt grow",id:"addrule-k",placeholder:"Trefwoord, bijv. Albert Heijn"});
+  const add=()=>{const k=nk.value.trim();if(!k)return; if(!nc){alert("Kies eerst een categorie.");return;}S.rules.unshift({k,c:nc});compileRules();saveRules();render();};
+  nk.addEventListener("keydown",e=>{if(e.key==="Enter")add();});
+  main.append(el("div",{class:"addrule"},nk,catSelect(nc,v=>{nc=v;},{auto:UNK}),el("button",{class:"btn pri",onclick:add},"Toevoegen")));
+  if(S.rules.length>15||S.rFilter)main.append(el("div",{class:"tools field"},el("input",{id:"rfilter",class:"grow",type:"search",placeholder:"Zoek in "+S.rules.length+" regels",value:S.rFilter,oninput:e=>{S.rFilter=e.target.value;clearTimeout(viewRules.t);viewRules.t=setTimeout(()=>{render();const i=$("#rfilter");i.focus();i.setSelectionRange(i.value.length,i.value.length);},250);}})));
   const q=S.rFilter.toLowerCase(); const sec=el("section",{class:"group"});
+  if(S.rules.length)sec.append(el("div",{class:"ghead"},el("span",{},S.rules.length+" regels"),el("span",{class:"of"},"bovenste regel gaat voor")));
   S.rules.forEach((r,idx)=>{ if(q&&!(r.k.toLowerCase().includes(q)||r.c.toLowerCase().includes(q)))return;
     sec.append(el("div",{class:"rule"},
       el("input",{class:"txt",value:r.k,"aria-label":"Trefwoord",onchange:e=>{r.k=e.target.value;compileRules();saveRules();render();}}),
       catSelect(r.c,v=>{r.c=v;compileRules();saveRules();render();}),
-      el("span",{class:"num",title:"Aantal transacties dat deze regel raakt"},(hits.get(r)||0)+"×"),
-      el("span",{class:"tools"},idx>0?el("button",{class:"btn sm",title:"Voorrang geven: naar boven",onclick:()=>{S.rules.splice(idx,1);S.rules.unshift(r);compileRules();saveRules();render();}},"↑"):null,
-        el("button",{class:"btn sm","aria-label":"Regel verwijderen",onclick:()=>{S.rules.splice(idx,1);compileRules();saveRules();render();}},"Verwijder")))); });
-  if(!sec.children.length)sec.append(el("div",{class:"empty"},S.rules.length?"Geen regels gevonden.":"Nog geen regels. Voeg er hierboven een toe, of maak ze vanuit een transactie."));
+      el("span",{class:"num muted",title:"Aantal transacties dat deze regel raakt"},(hits.get(r)||0)+"×"),
+      el("span",{class:"acts"},idx>0?el("button",{class:"icon",title:"Naar boven (voorrang)","aria-label":"Regel naar boven",onclick:()=>{S.rules.splice(idx,1);S.rules.unshift(r);compileRules();saveRules();render();}},"↑"):el("span",{class:"icon-sp"}),
+        el("button",{class:"icon",title:"Verwijderen","aria-label":"Regel verwijderen",onclick:()=>{S.rules.splice(idx,1);compileRules();saveRules();render();}},"×")))); });
+  if(!S.rules.length)sec.append(el("div",{class:"empty"},"Nog geen regels."));
+  else if(sec.children.length===1)sec.append(el("div",{class:"empty"},"Geen regels gevonden."));
   main.append(sec);
 }
 
@@ -290,72 +288,80 @@ function setYearBudget(year,cat,{month,yearTotal}){ const y=S.budgets[year]||(S.
 function setMonthBudget(year,cat,m,val){ const y=S.budgets[year]||(S.budgets[year]={}); const b=y[cat]||(y[cat]={base:0,m:{}}); if(!b.m)b.m={};
   if(Math.abs(val-(b.base||0))<0.005)delete b.m[m]; else b.m[m]=val; saveBudgets(); }
 function nextOnEnter(e){ if(e.key!=="Enter")return; e.preventDefault(); const col=e.target.dataset.col; const all=[...document.querySelectorAll('#main input.bin[data-col="'+col+'"]')]; const i=all.indexOf(e.target); (all[i+1]||e.target).focus(); }
-/* ---------- overzicht: werkelijk en budget op één pagina ---------- */
+/* ---------- overzicht en budget ---------- */
+// Twee standen: "bekijken" (hoe sta ik ervoor) en "budget bewerken" (bedragen invullen). Zo staat er nooit alles tegelijk op het scherm.
 function ovCtx(){ const Y=S.year,m=S.month,{T,unkN,unkSum,cnt}=totals(Y); let upto=0,from=0; for(let k=12;k>=1;k--) if(cnt[k]){upto=k;break;} for(let k=1;k<=12;k++) if(cnt[k]){from=k;break;}
   return {Y,m,T,unkN,unkSum,from,upto,ref:budgetRef(Y)}; }
 // Budget om mee te vergelijken: de gekozen maand, of bij heel jaar alleen de maanden waarover transacties zijn ingelezen.
 function cmpBudget(x,c){ if(x.m)return budgetOf(x.Y,c,x.m); if(!x.upto)return budgetOf(x.Y,c,0); let s=0; for(let k=x.from;k<=x.upto;k++)s+=budgetOf(x.Y,c,k); return s; }
-const cmpLabel=x=>{ if(x.m||!x.upto||(x.from===1&&x.upto===12))return ""; const lo=MONTHS[x.from-1].toLowerCase(),hi=MONTHS[x.upto-1].toLowerCase(); return x.from===1?" t/m "+hi:x.from===x.upto?" "+lo:" "+lo+"–"+hi; };
 const actOf=(x,grp,c)=>actual(grp,(x.T[c]||[])[x.m]||0);
-const perMonthOf=(x,c)=>x.m?budgetOf(x.Y,c,x.m):((S.budgets[x.Y]||{})[c]?.base||0);
 const hasOwnMonths=(Y,c)=>{ const b=(S.budgets[Y]||{})[c]; return !!(b&&b.m&&Object.keys(b.m).length); };
-function ovTiles(x){ const g=grp=>grp.cats.reduce((s,c)=>s+actOf(x,grp,c),0), gb=grp=>grp.cats.reduce((s,c)=>s+cmpBudget(x,c),0), L=cmpLabel(x);
-  const inc=g(GROUPS[0]),uit=g(GROUPS[1])+g(GROUPS[2])+g(GROUPS[3]),sp=g(GROUPS[4]);
-  const bInc=gb(GROUPS[0]),bUit=gb(GROUPS[1])+gb(GROUPS[2])+gb(GROUPS[3]),bSp=gb(GROUPS[4]),bRest=bInc-bUit-bSp;
-  const tile=(l,v,sub,cls)=>el("div",{class:"tile"},el("div",{class:"l"},l),el("div",{class:"v "+(cls||"")},eur0.format(v)),el("div",{class:"s"},sub));
-  return el("div",{class:"tiles",id:"otiles"},
-    tile("Inkomsten",inc,"budget"+L+" "+f0(bInc)), tile("Uitgaven",uit,"budget"+L+" "+f0(bUit)), tile("Gespaard en belegd",sp,"budget"+L+" "+f0(bSp)),
-    tile("Over",inc-uit-sp,(bInc||bUit||bSp)?(bRest<-0.5?"begroot"+L+": "+eur0.format(-bRest)+" te kort":"begroot over"+L+": "+f0(bRest)):"na uitgaven en sparen",inc-uit-sp<0?"neg":"pos")); }
-const cell=(cls,label,...kids)=>el("div",{class:"oc "+cls},label?el("span",{class:"ml"},label):null,...kids);
-function ovNameCell(x,grp,c){ const i=ALLCATS.indexOf(c), a=x.ref.avg(grp,c);
-  return el("div",{class:"oc name",id:"on-"+i},el("button",{class:"cat-link",onclick:()=>{S.tab="transacties";S.fCat=c;S.fUnk=false;S.shown=100;go();}},c),
-    el("span",{class:"sub"},hasOwnMonths(x.Y,c)?el("span",{class:"tag"},"maanden verschillen"):null,
-      x.ref.year!=null&&a>=0.5?el("button",{class:"refbtn",title:"Gemiddelde overnemen als budget per maand",onclick:()=>{ setYearBudget(x.Y,c,{month:roundBudget(a)}); render(); }},"gem. "+eur0.format(a)+" per maand"):null)); }
-function ovRow(x,gi,c){ const grp=GROUPS[gi], i=ALLCATS.indexOf(c), a=actOf(x,grp,c), bp=cmpBudget(x,c), open=S.bOpen===c;
-  const pm=el("input",{class:"bin",id:"bm-"+i,"data-col":"m",type:"text",inputmode:"decimal",enterkeyhint:"next",placeholder:"0",value:fmtIn(perMonthOf(x,c)),"aria-label":c+" budget per maand",
-    onkeydown:nextOnEnter,onchange:e=>{ const v=parseAmount(e.target.value); if(x.m)setBudget(x.Y,c,x.m,v,S.onlyMonth); else setYearBudget(x.Y,c,{month:v}); e.target.value=fmtIn(perMonthOf(x,c)); ovRefresh(x,gi,c); }});
-  const pj=el("input",{class:"bin",id:"by-"+i,"data-col":"y",type:"text",inputmode:"decimal",enterkeyhint:"next",placeholder:"0",value:fmtIn(budgetOf(x.Y,c,0)),"aria-label":c+" budget per jaar",
-    onkeydown:nextOnEnter,onchange:e=>{ if(hasOwnMonths(x.Y,c)&&!confirm("De afwijkende maanden van "+c+" worden gelijk verdeeld. Doorgaan?")){e.target.value=fmtIn(budgetOf(x.Y,c,0));return;}
-      setYearBudget(x.Y,c,{yearTotal:parseAmount(e.target.value)}); e.target.value=fmtIn(budgetOf(x.Y,c,0)); ovRefresh(x,gi,c); }});
-  const wrap=el("div",{class:"orw",id:"rw-"+i});
-  wrap.append(el("div",{class:"orow"},ovNameCell(x,grp,c),cell("pm","Budget per maand",pm),cell("pj","Budget per jaar",pj),
-    cell("act","Werkelijk",el("span",{class:"num"},f0(a))),cell("dif","Verschil",el("span",{id:"od-"+i},diffCell(grp,a,bp))),
-    el("div",{class:"oc mtr",id:"om-"+i},meter(grp,a,bp)),
-    el("div",{class:"oc exp"},el("button",{class:"btn sm","aria-expanded":open,"aria-label":"Budget per maand voor "+c,onclick:()=>{S.bOpen=open?null:c;render();}},open?"⌄":"›"))));
+const groupSum=(grp,fn)=>grp.cats.reduce((s,c)=>s+fn(c),0);
+const kinds=fn=>({inc:groupSum(GROUPS[0],fn),uit:groupSum(GROUPS[1],fn)+groupSum(GROUPS[2],fn)+groupSum(GROUPS[3],fn),sp:groupSum(GROUPS[4],fn)});
+const anyBudget=Y=>ALLCATS.some(c=>budgetOf(Y,c,0)>0);
+function viewOverview(main){ if(S.editBudget)viewBudgetEdit(main); else viewStatus(main); }
+
+function viewStatus(main){
+  const x=ovCtx(), hasB=anyBudget(x.Y);
+  const A=kinds(c=>{ const g=GROUPS.find(g=>g.cats.includes(c)); return actOf(x,g,c); }), B=kinds(c=>cmpBudget(x,c)), rest=A.inc-A.uit-A.sp;
+  const per=S.month?MONTHS_LONG[S.month-1]+" "+S.year:String(S.year);
+  const stat=(l,v,b)=>el("div",{class:"stat"},el("div",{class:"l"},l),el("div",{class:"v"},eur0.format(v)),el("div",{class:"s"},hasB?"van "+eur0.format(b):" "));
+  main.append(el("div",{class:"card hero"},
+    el("div",{class:"herotop"},el("div",{},el("div",{class:"l"},"Over in "+per),el("div",{class:"big "+(rest<-0.5?"neg":"pos")},eur0.format(rest))),
+      el("button",{class:"btn"+(hasB?"":" pri"),onclick:()=>{S.editBudget=true;render();window.scrollTo(0,0);}},hasB?"Budget bewerken":"Budget invullen")),
+    el("div",{class:"stats"},stat("Inkomsten",A.inc,B.inc),stat("Uitgaven",A.uit,B.uit),stat("Gespaard",A.sp,B.sp))));
+  if(!S.tx.length){ main.append(el("div",{class:"note info"},"Nog geen transacties ingelezen.",el("button",{class:"btn sm",onclick:()=>{S.tab="importeren";go();}},"Importeren"))); return; }
+  if(x.unkN[x.m])main.append(el("div",{class:"note"},x.unkN[x.m]+" transacties zonder categorie",el("button",{class:"btn sm",onclick:()=>{S.tab="transacties";S.fUnk=true;S.fCat="";S.shown=50;go();}},"Toewijzen")));
+  let hidden=0;
+  GROUPS.forEach(grp=>{ const rows=[]; let ga=0,gb=0;
+    for(const c of grp.cats){ const a=actOf(x,grp,c), b=cmpBudget(x,c); ga+=a; gb+=b;
+      if(!S.showEmpty&&Math.abs(a)<0.5&&b<0.5){hidden++;continue;} rows.push(catLine(grp,c,a,b)); }
+    if(!rows.length)return;
+    main.append(el("section",{class:"group"},el("div",{class:"ghead"},el("span",{},grp.name),el("span",{class:"num"},eur0.format(ga),gb?el("span",{class:"of"}," van "+eur0.format(gb)):null)),...rows)); });
+  if(hidden||S.showEmpty)main.append(el("button",{class:"linkbtn",onclick:()=>{S.showEmpty=!S.showEmpty;render();}},S.showEmpty?"Lege categorieën verbergen":"Lege categorieën tonen ("+hidden+")"));
+}
+function catLine(grp,c,a,b){ const over=grp.kind==="uit"&&b>0&&a>b+0.5, p=b>0?Math.max(0,Math.min(1,a/b)):0;
+  return el("button",{class:"cline",onclick:()=>{S.tab="transacties";S.fCat=c;S.fUnk=false;S.shown=50;go();}},
+    el("span",{class:"cn"},c),
+    el("span",{class:"cv"},el("span",{class:"num"+(over?" neg":"")},f0(a)),el("span",{class:"of"},b>0?"van "+eur0.format(b):"geen budget")),
+    b>0?el("span",{class:"bar"+(over?" over":"")},el("i",{style:"width:"+(p*100)+"%"})):null); }
+
+/* budget bewerken */
+function budgetSummary(Y){ const P=kinds(c=>budgetOf(Y,c,0)/12), rest=P.inc-P.uit-P.sp;
+  return el("div",{class:"bsum",id:"bsum"},el("span",{},"Per maand: in ",el("b",{},eur0.format(P.inc))),el("span",{},"uit ",el("b",{},eur0.format(P.uit))),el("span",{},"sparen ",el("b",{},eur0.format(P.sp))),
+    el("span",{},"over ",el("b",{class:rest<-0.5?"neg":"pos"},eur0.format(rest)))); }
+function editName(Y,ref,grp,c){ const i=ALLCATS.indexOf(c), a=ref.avg(grp,c);
+  return el("div",{class:"en",id:"en-"+i},el("span",{},c),el("span",{class:"sub"},
+    ref.year!=null&&a>=0.5?el("button",{class:"refbtn",title:"Overnemen als budget per maand",onclick:()=>{ setYearBudget(Y,c,{month:roundBudget(a)}); render(); }},"gem. "+eur0.format(a)):null,
+    hasOwnMonths(Y,c)?el("span",{class:"tag"},"per maand anders"):null)); }
+function editRow(Y,ref,grp,c){ const i=ALLCATS.indexOf(c), b=(S.budgets[Y]||{})[c], open=S.bOpen===c;
+  const inp=(id,col,val,label,on)=>el("input",{class:"bin",id,"data-col":col,type:"text",inputmode:"decimal",enterkeyhint:"next",placeholder:"",value:fmtIn(val),"aria-label":label,onkeydown:nextOnEnter,onchange:on});
+  const pm=inp("bm-"+i,"m",b?b.base||0:0,c+" per maand",e=>{ setYearBudget(Y,c,{month:parseAmount(e.target.value)}); e.target.value=fmtIn(parseAmount(e.target.value)); editRefresh(Y,ref,grp,c); });
+  const pj=inp("by-"+i,"y",budgetOf(Y,c,0),c+" per jaar",e=>{ if(hasOwnMonths(Y,c)&&!confirm("De afwijkende maanden van "+c+" worden gelijk verdeeld. Doorgaan?")){e.target.value=fmtIn(budgetOf(Y,c,0));return;}
+    setYearBudget(Y,c,{yearTotal:parseAmount(e.target.value)}); e.target.value=fmtIn(budgetOf(Y,c,0)); editRefresh(Y,ref,grp,c); });
+  const wrap=el("div",{class:"erw"},el("div",{class:"erow"},editName(Y,ref,grp,c),pm,pj,
+    el("button",{class:"btn sm exp","aria-expanded":open,"aria-label":"Per maand anders voor "+c,title:"Per maand anders",onclick:()=>{S.bOpen=open?null:c;render();}},open?"⌄":"›")));
   if(open){ const grid=el("div",{class:"bmonths"});
-    MONTHS.forEach((mn,k)=>{ const own=(S.budgets[x.Y]||{})[c]?.m?.[k+1]!=null;
-      grid.append(el("label",{class:(own?"diff":"")+(x.m===k+1?" cur":"")},mn,el("input",{class:"bin",id:"bmm-"+i+"-"+(k+1),"data-col":"mm"+i,type:"text",inputmode:"decimal",enterkeyhint:"next",placeholder:"0",value:fmtIn(budgetOf(x.Y,c,k+1)),"aria-label":c+" "+MONTHS_LONG[k],
-        onkeydown:nextOnEnter,onchange:e=>{ setMonthBudget(x.Y,c,k+1,parseAmount(e.target.value)); e.target.value=fmtIn(budgetOf(x.Y,c,k+1)); ovRefresh(x,gi,c); }}))); });
-    wrap.append(el("div",{class:"bmwrap"},grid,el("button",{class:"btn sm",onclick:()=>{ const cur=(S.budgets[x.Y]||{})[c]; if(cur){cur.m={};saveBudgets();} render(); }},"Alle maanden gelijk"))); }
+    MONTHS.forEach((mn,k)=>{ const own=b&&b.m&&b.m[k+1]!=null;
+      grid.append(el("label",{class:own?"diff":""},mn,inp("bmm-"+i+"-"+(k+1),"mm"+i,budgetOf(Y,c,k+1),c+" "+MONTHS_LONG[k],e=>{ setMonthBudget(Y,c,k+1,parseAmount(e.target.value)); e.target.value=fmtIn(budgetOf(Y,c,k+1)); editRefresh(Y,ref,grp,c); }))); });
+    wrap.append(el("div",{class:"bmwrap"},grid,el("button",{class:"btn sm",onclick:()=>{ const cur=(S.budgets[Y]||{})[c]; if(cur){cur.m={};saveBudgets();} render(); }},"Alle maanden gelijk"))); }
   return wrap; }
-function ovSum(x,gi){ const grp=GROUPS[gi]; let pm=0,pj=0,a=0,bp=0; for(const c of grp.cats){ pm+=x.m?budgetOf(x.Y,c,x.m):budgetOf(x.Y,c,0)/12; pj+=budgetOf(x.Y,c,0); a+=actOf(x,grp,c); bp+=cmpBudget(x,c); }
-  return el("div",{class:"orow sum",id:"os-"+gi},el("div",{class:"oc name"},"Totaal "+grp.name.toLowerCase()),cell("pm","Per maand",el("span",{class:"num"},f0(pm))),cell("pj","Per jaar",el("span",{class:"num"},f0(pj))),
-    cell("act","Werkelijk",el("span",{class:"num"},f0(a))),cell("dif","Verschil",diffCell(grp,a,bp)),el("div",{class:"oc mtr"},meter(grp,a,bp)),el("div",{class:"oc exp"})); }
 // Werkt na een wijziging alleen de bedragen bij, zonder de pagina opnieuw op te bouwen: zo blijven cursor en toetsenbord in het volgende veld.
-function ovRefresh(x,gi,c){ const grp=GROUPS[gi], i=ALLCATS.indexOf(c), a=actOf(x,grp,c), bp=cmpBudget(x,c), act=document.activeElement;
-  const pm=$("#bm-"+i), pj=$("#by-"+i); if(pm&&pm!==act)pm.value=fmtIn(perMonthOf(x,c)); if(pj&&pj!==act)pj.value=fmtIn(budgetOf(x.Y,c,0));
-  for(let k=1;k<=12;k++){ const e=$("#bmm-"+i+"-"+k); if(!e)break; if(e!==act)e.value=fmtIn(budgetOf(x.Y,c,k)); e.parentNode.classList.toggle("diff",(S.budgets[x.Y]||{})[c]?.m?.[k]!=null); }
-  $("#od-"+i)?.replaceChildren(diffCell(grp,a,bp)); $("#om-"+i)?.replaceChildren(meter(grp,a,bp)); $("#on-"+i)?.replaceWith(ovNameCell(x,grp,c));
-  $("#os-"+gi)?.replaceWith(ovSum(x,gi)); $("#otiles")?.replaceWith(ovTiles(x)); }
-function viewOverview(main){
-  const x=ovCtx(), Y=x.Y, m=x.m, yb=S.budgets[Y]||{};
-  if(!S.tx.length)main.append(el("div",{class:"note info"},"Nog geen transacties: je kunt alvast budgetten invullen. Lees je bankexport in bij ",el("button",{class:"btn sm",onclick:()=>{S.tab="importeren";go();}},"Importeren"),"."));
-  main.append(ovTiles(x));
-  if(x.unkN[m])main.append(el("div",{class:"note"},x.unkN[m]+" transacties in "+periodLabel()+" hebben nog geen categorie (netto "+eur0.format(x.unkSum[m])+").",
-    el("button",{class:"btn sm",onclick:()=>{S.tab="transacties";S.fUnk=true;S.fCat="";S.shown=100;go();}},"Nu toewijzen")));
-  const tools=el("div",{class:"tools"});
-  if(x.ref.year!=null)tools.append(el("button",{class:"btn sm",onclick:()=>{ for(const grp of GROUPS)for(const c of grp.cats){ if(budgetOf(Y,c,0))continue; const a=x.ref.avg(grp,c); if(a>=1)setYearBudget(Y,c,{month:roundBudget(a)}); } render(); }},"Lege budgetten vullen met gemiddelde "+x.ref.year));
-  if(S.budgets[Y-1]&&Object.keys(S.budgets[Y-1]).length)tools.append(el("button",{class:"btn sm",onclick:()=>{ if(Object.keys(yb).length&&!confirm("Het budget van "+Y+" wordt vervangen door dat van "+(Y-1)+". Doorgaan?"))return; S.budgets[Y]=JSON.parse(JSON.stringify(S.budgets[Y-1])); saveBudgets(); render(); }},"Budget "+(Y-1)+" overnemen"));
-  if(Object.keys(yb).length)tools.append(el("button",{class:"btn sm",onclick:()=>{ if(!confirm("Alle budgetten van "+Y+" wissen?"))return; delete S.budgets[Y]; saveBudgets(); render(); }},"Budget "+Y+" wissen"));
-  if(m)tools.append(el("label",{},el("input",{type:"checkbox",id:"onlymonth",checked:S.onlyMonth,onchange:e=>{S.onlyMonth=e.target.checked;}}),"Budget per maand alleen voor "+MONTHS_LONG[m-1]+" wijzigen"));
-  main.append(tools);
-  main.append(el("p",{class:"prose"},"Vul per categorie het budget ",el("b",{},"per maand of per jaar")," in; het andere veld rekent mee en met Enter ga je naar de volgende categorie. Werkelijk en verschil gelden voor "+periodLabel()+". Tik op het gemiddelde om het over te nemen, en open met › de maanden voor afwijkende bedragen, zoals vakantie in juli."));
-  GROUPS.forEach((grp,gi)=>{ const sec=el("section",{class:"group ov"});
-    sec.append(el("div",{class:"orow head"},el("div",{class:"oc name"},grp.name),el("span",{class:"oc pm h"},m?"Budget "+MONTHS[m-1].toLowerCase():"Per maand"),el("span",{class:"oc pj h"},"Per jaar"),
-      el("span",{class:"oc act h"},"Werkelijk"),el("span",{class:"oc dif h"},"Verschil"+cmpLabel(x)),el("span",{class:"oc mtr"}),el("span",{class:"oc exp"})));
-    for(const c of grp.cats)sec.append(ovRow(x,gi,c));
-    sec.append(ovSum(x,gi)); main.append(sec); });
-  main.append(el("p",{class:"prose"},"Groen is gunstig: minder uitgegeven, of meer ontvangen of gespaard dan begroot. Terugbetalingen zoals Tikkies verlagen de uitgaven van hun categorie."));
+function editRefresh(Y,ref,grp,c){ const i=ALLCATS.indexOf(c), act=document.activeElement, b=(S.budgets[Y]||{})[c];
+  const pm=$("#bm-"+i), pj=$("#by-"+i); if(pm&&pm!==act)pm.value=fmtIn(b?b.base||0:0); if(pj&&pj!==act)pj.value=fmtIn(budgetOf(Y,c,0));
+  for(let k=1;k<=12;k++){ const e=$("#bmm-"+i+"-"+k); if(!e)break; if(e!==act)e.value=fmtIn(budgetOf(Y,c,k)); e.parentNode.classList.toggle("diff",b?.m?.[k]!=null); }
+  $("#en-"+i)?.replaceWith(editName(Y,ref,grp,c)); $("#bsum")?.replaceWith(budgetSummary(Y)); }
+function viewBudgetEdit(main){
+  const Y=S.year, ref=budgetRef(Y), yb=S.budgets[Y]||{};
+  const more=[];
+  if(ref.year!=null)more.push(el("button",{class:"btn sm",onclick:()=>{ for(const grp of GROUPS)for(const c of grp.cats){ if(budgetOf(Y,c,0))continue; const a=ref.avg(grp,c); if(a>=1)setYearBudget(Y,c,{month:roundBudget(a)}); } render(); }},"Lege vullen met gemiddelde"));
+  if(S.budgets[Y-1]&&Object.keys(S.budgets[Y-1]).length)more.push(el("button",{class:"btn sm",onclick:()=>{ if(Object.keys(yb).length&&!confirm("Het budget van "+Y+" wordt vervangen door dat van "+(Y-1)+". Doorgaan?"))return; S.budgets[Y]=JSON.parse(JSON.stringify(S.budgets[Y-1])); saveBudgets(); render(); }},"Neem "+(Y-1)+" over"));
+  if(Object.keys(yb).length)more.push(el("button",{class:"btn sm",onclick:()=>{ if(!confirm("Alle budgetten van "+Y+" wissen?"))return; delete S.budgets[Y]; saveBudgets(); render(); }},"Wissen"));
+  main.append(el("div",{class:"card"},el("div",{class:"herotop"},el("h2",{},"Budget "+Y),el("button",{class:"btn pri",onclick:()=>{S.editBudget=false;S.bOpen=null;render();window.scrollTo(0,0);}},"Klaar")),
+    budgetSummary(Y),more.length?el("div",{class:"tools"},...more):null));
+  GROUPS.forEach(grp=>{ main.append(el("section",{class:"group"},
+    el("div",{class:"erow head"},el("span",{class:"en"},grp.name),el("span",{class:"h"},"Per maand"),el("span",{class:"h"},"Per jaar"),el("span",{})),
+    ...grp.cats.map(c=>editRow(Y,ref,grp,c)))); });
 }
 
 /* ---------- vermogen ---------- */
@@ -393,28 +399,23 @@ function wealthChart(D){ const W=720,H=300,L=52,R=14,Tp=22,B=26,pw=W-L-R,ph=H-Tp
     hit.addEventListener("pointerenter",()=>show(r,hit)); hit.addEventListener("focus",()=>show(r,hit)); hit.addEventListener("click",()=>show(r,hit)); hit.addEventListener("blur",hide); root.append(hit); }
   root.addEventListener("pointerleave",hide); wrap.append(root,tip); return wrap; }
 function viewWealth(main){
-  if(!S.tx.length){main.append(el("div",{class:"empty"},"Nog geen transacties. Ga naar Importeren om je eerste export in te lezen."));return;}
+  if(!S.tx.length){main.append(el("div",{class:"empty"},"Nog geen transacties. Lees eerst je bankexport in bij Importeren."));return;}
   const D=wealthData(S.year); if(!D.rows.length){main.append(el("div",{class:"empty"},"Geen transacties in "+S.year+"."));return;}
   const end=D.rows[D.rows.length-1], built=end.total-D.begin, saved=D.rows.reduce((s,r)=>s+r.flow[1]+r.flow[2]+r.flow[3],0);
-  const tile=(l,v,s,cls)=>el("div",{class:"tile"},el("div",{class:"l"},l),el("div",{class:"v "+(cls||"")},v),el("div",{class:"s"},s));
-  main.append(el("div",{class:"tiles"},
-    tile("Vermogen eind "+MONTHS_LONG[end.m-1],eur0.format(end.total),"begin van het jaar "+eur0.format(D.begin)),
-    tile("Opgebouwd in "+S.year,(built>0?"+":"")+eur0.format(built),"t/m "+MONTHS_LONG[end.m-1],built<0?"neg":"pos"),
-    tile("Gemiddeld per maand",eur0.format(built/D.span),"over "+D.span.toLocaleString("nl-NL",{maximumFractionDigits:1})+" maanden"),
-    tile("Spaarquote",D.inc>0?Math.round(saved/D.inc*100)+"%":"–","ingelegd "+eur0.format(saved)+" van je inkomsten")));
-  main.append(el("div",{class:"card"},el("h2",{},"Vermogen per maand"),
-    el("div",{class:"legend"},WSER.slice().reverse().map(s=>el("span",{},el("i",{style:"background:"+s.c}),s.short||s.k))),wealthChart(D)));
-  const sec=el("section",{class:"group"}),tw=el("div",{class:"tablewrap"});
-  tw.append(el("div",{class:"row head w5"},el("span",{},"Per maand"),...WSER.map(s=>el("span",{class:"h"},s.short||s.k)),el("span",{class:"h"},"Stand eind maand")));
+  const stat=(l,v,cls,sub)=>el("div",{class:"stat"},el("div",{class:"l"},l),el("div",{class:"v "+(cls||"")},v),sub?el("div",{class:"s"},sub):null);
+  main.append(el("div",{class:"card hero"},el("div",{class:"l"},"Vermogen eind "+MONTHS_LONG[end.m-1]),el("div",{class:"big"},eur0.format(end.total)),
+    el("div",{class:"stats"},stat("Opgebouwd in "+S.year,(built>0?"+":"")+eur0.format(built),built<0?"neg":"pos"),stat("Per maand",eur0.format(built/D.span)),
+      stat("Spaarquote",D.inc>0?Math.round(saved/D.inc*100)+"%":"–"))));
+  main.append(el("div",{class:"card"},el("div",{class:"legend"},WSER.slice().reverse().map(s=>el("span",{},el("i",{style:"background:"+s.c}),s.short||s.k))),wealthChart(D)));
+  const tw=el("div",{class:"tablewrap"});
+  tw.append(el("div",{class:"row head w5"},el("span",{},""),...WSER.map(s=>el("span",{class:"h"},s.short||s.k)),el("span",{class:"h"},"Stand")));
   for(const r of D.rows)tw.append(el("div",{class:"row w5"},el("span",{class:"name"},MONTHS_LONG[r.m-1]),...r.flow.map(v=>el("span",{class:"num "+(v<-0.5?"neg":"")},Math.abs(v)<0.5?"–":(v>0?"+":"")+eur0.format(v))),el("span",{class:"num"},eur0.format(r.total))));
-  tw.append(el("div",{class:"row sum w5"},el("span",{class:"name"},"Totaal"),...WSER.map((s,i)=>{const v=D.rows.reduce((a,r)=>a+r.flow[i],0);return el("span",{class:"num"},(v>0?"+":"")+eur0.format(v));}),el("span",{class:"num"},eur0.format(end.total))));
-  sec.append(tw); main.append(sec);
+  main.append(el("details",{class:"group fold"},el("summary",{},"Per maand"),tw));
   const st=S.wealth[S.year]||{};
-  main.append(el("div",{class:"card"},el("h2",{},"Stand op 1 januari "+S.year),
-    el("div",{class:"starts"},WSER.map((s,i)=>el("label",{},s.short||s.k,el("input",{id:"start-"+i,type:"text",inputmode:"decimal",placeholder:"0",value:st[s.k]?String(st[s.k]).replace(".",","):"",
-      onchange:e=>{ const v=parseFloat(e.target.value.replace(/\./g,"").replace(",","."))||0; (S.wealth[S.year]||(S.wealth[S.year]={}))[s.k]=v; saveWealth(); render(); }})))),
-    el("p",{class:"prose"},"Vul in wat er op 1 januari op je spaar- en beleggingsrekeningen stond; dan toont de grafiek je totale vermogen in plaats van alleen de opbouw van dit jaar. De kolommen tellen je inleg op. Rente en koersresultaat zitten er niet in, en opnames tellen als min.")));
-}
+  main.append(el("details",{class:"group fold"},el("summary",{},"Beginstand 1 januari "+S.year,el("span",{class:"of"},D.begin?eur0.format(D.begin):"niet ingevuld")),
+    el("div",{class:"foldbody"},el("p",{class:"prose"},"Wat stond er op 1 januari op je rekeningen? Dan toont de grafiek je hele vermogen, niet alleen de opbouw van dit jaar."),
+      el("div",{class:"starts"},WSER.map((s,i)=>el("label",{},s.short||s.k,el("input",{id:"start-"+i,type:"text",inputmode:"decimal",placeholder:"0",value:st[s.k]?String(st[s.k]).replace(".",","):"",
+        onchange:e=>{ (S.wealth[S.year]||(S.wealth[S.year]={}))[s.k]=parseAmount(e.target.value); saveWealth(); render(); }}))))))); }
 
 /* ---------- importeren ---------- */
 function h32(str,seed){ let h=seed>>>0; for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;} return h.toString(16).padStart(8,"0"); }
@@ -476,29 +477,26 @@ function viewImport(main){
   const inp=el("input",{type:"file",id:"file",accept:".xls,.xlsx,.csv,.txt,.tab",hidden:true,onchange:e=>{if(e.target.files[0])importFile(e.target.files[0]);e.target.value="";}});
   const drop=el("div",{class:"drop",ondragover:e=>{e.preventDefault();drop.classList.add("over");},ondragleave:()=>drop.classList.remove("over"),
     ondrop:e=>{e.preventDefault();drop.classList.remove("over");if(e.dataTransfer.files[0])importFile(e.dataTransfer.files[0]);}},
-    el("h2",{},"Sleep je ABN AMRO-export hierheen"),el("div",{class:"prose"},"Excel (XLS) of TXT, zoals je het bij de bank downloadt onder Mutaties downloaden."),
+    el("h2",{},"Bankexport inlezen"),el("div",{class:"prose"},"ABN AMRO, Excel of TXT. Dubbele transacties worden overgeslagen."),
     el("button",{class:"btn pri",onclick:()=>inp.click()},"Bestand kiezen"),inp);
   main.append(drop);
   if(S.importMsg)main.append(el("div",{class:"note info",role:"status"},S.importMsg, S.tx.length?el("button",{class:"btn sm",onclick:()=>{S.tab="overzicht";go();}},"Naar overzicht"):null));
-  main.append(el("p",{class:"prose"},"Je mag overlappende periodes inlezen: transacties die er al in staan worden herkend en overgeslagen. Je gegevens blijven op dit toestel, in deze browser; er gaat niets naar een server. Elk profiel heeft zijn eigen transacties, regels, budgetten en vermogen."));
-
   const binp=el("input",{type:"file",id:"bfile",accept:".json,application/json",hidden:true,onchange:e=>{if(e.target.files[0])restoreBackup(e.target.files[0]);e.target.value="";}});
   main.append(el("div",{class:"card"},el("h2",{},"Back-up van "+profileName()),
-    el("p",{class:"prose"},"Omdat alles alleen op dit toestel staat, raakt het weg als je de browsergegevens wist of de app verwijdert. Maak af en toe een back-up, of gebruik er een om je gegevens naar een ander toestel over te zetten."),
-    el("div",{class:"tools"},el("button",{class:"btn pri",disabled:!S.tx.length&&!S.rules.length,onclick:exportBackup},"Back-up maken"),el("button",{class:"btn",onclick:()=>binp.click()},"Back-up terugzetten"),binp),
+    el("p",{class:"prose"},"Je gegevens staan alleen op dit toestel. Maak af en toe een back-up."),
+    el("div",{class:"tools"},el("button",{class:"btn",disabled:!S.tx.length&&!S.rules.length,onclick:exportBackup},"Back-up maken"),el("button",{class:"btn",onclick:()=>binp.click()},"Terugzetten"),binp),
     S.backupMsg?el("div",{class:"note info",role:"status"},S.backupMsg):null));
-
   const keys=Object.keys(S.months).filter(k=>S.months[k].length).sort().reverse();
-  if(keys.length){ const sec=el("section",{class:"group"}); sec.append(el("div",{class:"row head",style:"grid-template-columns:minmax(0,1fr) auto"},el("span",{},"Ingelezen maanden"),el("span",{class:"h"},"Transacties")));
-    for(const k of keys)sec.append(el("div",{class:"row",style:"grid-template-columns:minmax(0,1fr) auto"},el("span",{},MONTHS_LONG[+k.slice(5)-1]+" "+k.slice(0,4)),el("span",{class:"num"},S.months[k].length)));
-    main.append(sec); }
-  main.append(el("p",{class:"prose"},"Versie "+APP_VERSION));
+  if(keys.length){ const lab=k=>MONTHS[+k.slice(5)-1].toLowerCase()+" "+k.slice(0,4);
+    main.append(el("details",{class:"group fold"},el("summary",{},"Ingelezen",el("span",{class:"of"},keys.length===1?lab(keys[0]):lab(keys[keys.length-1])+" – "+lab(keys[0]))),
+      ...keys.map(k=>el("div",{class:"frow"},el("span",{},MONTHS_LONG[+k.slice(5)-1]+" "+k.slice(0,4)),el("span",{class:"num muted"},S.months[k].length))))); }
+  main.append(el("p",{class:"prose foot"},"Versie "+APP_VERSION));
 }
 /* ---------- navigatie en terug ---------- */
 // Elke paginawissel komt in de browsergeschiedenis, zodat Terug (knop of veeggebaar) naar de vorige pagina gaat,
 // inclusief profiel, gekozen periode, filters en scrollpositie.
 function viewState(n){ return {n,profile,tab:S.tab,year:S.year,month:S.month,fCat:S.fCat,fUnk:S.fUnk,fText:S.fText,scroll:0}; }
-function restoreView(st){ Object.assign(S,{tab:st.tab==="budgetten"?"overzicht":st.tab,fCat:st.fCat||"",fUnk:!!st.fUnk,fText:st.fText||"",shown:100,ruleFor:null});
+function restoreView(st){ Object.assign(S,{tab:st.tab==="budgetten"?"overzicht":st.tab,fCat:st.fCat||"",fUnk:!!st.fUnk,fText:st.fText||"",shown:50,ruleFor:null});
   if(st.year!=null)S.year=st.year; if(st.month!=null)S.month=st.month; }
 function go(){ try{ const prev=history.state||viewState(0); history.replaceState({...prev,scroll:window.scrollY},"");
     history.pushState(viewState((prev.n||0)+1),"","#"+S.tab); }catch(e){} render(); window.scrollTo(0,0); }

@@ -38,24 +38,22 @@ bovenin `app.js`.
 
 ## Overzicht en budget
 
-Eén pagina voor wat je werkelijk uitgeeft én je budget. Kies bovenaan een jaar
-(ook volgend jaar) en *Heel jaar* of een maand. Per categorie:
+Kies bovenaan een jaar en *Heel jaar* of een maand.
 
-- budget **per maand** of **per jaar** invullen (het andere veld rekent mee);
-  Enter gaat naar de volgende categorie;
-- *Werkelijk*, *Verschil* en een balk voor de gekozen periode. Bij *Heel jaar*
-  vergelijkt het verschil met het budget van de maanden waarover je
-  transacties hebt ingelezen;
-- het gemiddelde per maand; tik erop om het over te nemen;
-- met › de 12 maanden voor afwijkende bedragen (bijv. vakantie in juli).
-
-Verder: lege budgetten vullen met je gemiddelde, het budget van vorig jaar
-overnemen, een jaar wissen, en (in een maand) een budget alleen voor die maand
-wijzigen.
+- **Bekijken:** bovenaan wat er over is, met inkomsten, uitgaven en gespaard
+  (en het budget). Daaronder per categorie wat je uitgaf, het budget en een
+  balk (rood als je erover zit). Lege categorieën zijn verborgen. Tik op een
+  categorie voor de transacties.
+- **Budget bewerken:** per categorie een bedrag per maand of per jaar (het
+  andere rekent mee; Enter gaat naar de volgende). Tik op het gemiddelde om
+  het over te nemen, of vul alle lege velden ermee. Met › vul je per maand
+  afwijkende bedragen in. Ook: budget van vorig jaar overnemen of wissen.
+- Bij *Heel jaar* vergelijkt de app met het budget van de maanden waarover je
+  transacties hebt ingelezen.
 
 ## Regels laten maken door Claude
 
-Bovenaan het tabblad *Regels*:
+Bovenaan het tabblad *Regels*, bij *Laat Claude regels maken*:
 
 1. **Vraag kopiëren** (of *Delen met Claude-app*): de app zet de tegenpartijen
    zonder categorie, je bestaande regels en de vaste categorieën in één vraag.
