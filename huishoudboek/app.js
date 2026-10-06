@@ -11,6 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+const APP_VERSION="4";
 const TABS=["overzicht","vermogen","transacties","regels","importeren"];
 
 /* ---------- toestand ---------- */
@@ -434,6 +435,7 @@ function viewImport(main){
   if(keys.length){ const sec=el("section",{class:"group"}); sec.append(el("div",{class:"row head",style:"grid-template-columns:minmax(0,1fr) auto"},el("span",{},"Ingelezen maanden"),el("span",{class:"h"},"Transacties")));
     for(const k of keys)sec.append(el("div",{class:"row",style:"grid-template-columns:minmax(0,1fr) auto"},el("span",{},MONTHS_LONG[+k.slice(5)-1]+" "+k.slice(0,4)),el("span",{class:"num"},S.months[k].length)));
     main.append(sec); }
+  main.append(el("p",{class:"prose"},"Versie "+APP_VERSION));
 }
 function go(){ try{history.replaceState(null,"","#"+S.tab);}catch(e){} render(); window.scrollTo(0,0); }
 function navOpen(open){ $("#tabs").hidden=!open; $("#navbtn").setAttribute("aria-expanded",open); }
@@ -442,5 +444,5 @@ $("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-ta
 document.addEventListener("click",e=>{if(!e.target.closest(".navwrap"))navOpen(false);});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#tabs").hidden){navOpen(false);$("#navbtn").focus();}});
 addEventListener("pagehide",flushSaves); document.addEventListener("visibilitychange",()=>{if(document.hidden)flushSaves();});
-if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
 boot();
