@@ -11,7 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="6";
+const APP_VERSION="7";
 const TABS=["overzicht","budgetten","vermogen","transacties","regels","importeren"];
 
 /* ---------- toestand ---------- */
@@ -134,12 +134,14 @@ function render(){
   ({overzicht:viewOverview,budgetten:viewBudgets,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport})[S.tab](main);
 }
 function renderProfiles(){ const box=$("#profiles"); box.replaceChildren(...PROFILES.map(p=>el("button",{class:"seg","aria-pressed":p.id===profile,onclick:()=>switchProfile(p.id)},p.name))); }
+// Jaren als knoppen naast elkaar (oudste links), zodat je met één tik wisselt.
+function yearSwitch(ys,pick){ return el("div",{class:"yearseg",role:"group","aria-label":"Jaar"},ys.map(y=>el("button",{class:"seg","aria-pressed":y===S.year,onclick:()=>{ if(y!==S.year)pick(y); }},y))); }
 function renderRail(){ const rail=$("#rail"); rail.replaceChildren();
   if(S.tab==="budgetten"){ rail.hidden=false; const ys=budgetYears(); if(!ys.includes(S.year))S.year=ys[ys.length-1];
-    rail.append(el("select",{id:"year","aria-label":"Jaar",onchange:e=>{S.year=+e.target.value;render();}},ys.map(y=>el("option",{value:y,selected:y===S.year},y)))); return; }
+    rail.append(yearSwitch(ys,y=>{S.year=y;render();})); return; }
   rail.hidden=S.tab==="regels"||S.tab==="importeren"||!S.tx.length; if(rail.hidden)return;
-  const ys=years(); if(!ys.includes(S.year)){S.year=ys[0];} const sel=el("select",{id:"year","aria-label":"Jaar",onchange:e=>{S.year=+e.target.value;S.shown=100;render();}},ys.map(y=>el("option",{value:y,selected:y===S.year},y)));
-  rail.append(sel); if(S.tab==="vermogen")return; const {cnt}=totals(S.year);
+  const ys=years(); if(!ys.includes(S.year)){S.year=ys[0];}
+  rail.append(yearSwitch(ys.slice().reverse(),y=>{S.year=y;S.shown=100;render();})); if(S.tab==="vermogen")return; const {cnt}=totals(S.year);
   rail.append(el("button",{class:"chip","aria-pressed":S.month===0,onclick:()=>{S.month=0;S.shown=100;render();}},"Heel jaar"));
   MONTHS.forEach((n,i)=>rail.append(el("button",{class:"chip"+(cnt[i+1]?"":" off"),"aria-pressed":S.month===i+1,onclick:()=>{S.month=i+1;S.shown=100;render();}},n)));
 }

@@ -162,3 +162,5 @@ input.bin:focus{background:var(--surface);border-color:var(--accent)}
   .brow.head span:last-child{display:none}
   .bmonths{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+.yearseg{display:inline-flex;background:var(--fill);border-radius:9px;padding:2px;margin-right:4px}
+.yearseg .seg{font-variant-numeric:tabular-nums}
