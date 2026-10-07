@@ -2,6 +2,7 @@
 
 import type { Norms } from '../config/norms'
 import type { House, MortgageSettings } from '../domain/types'
+import { pct } from './format'
 import { deductionRate, monthlyCost, type MaxMortgageResult, type MonthlyCost } from './mortgage'
 
 /**
@@ -51,8 +52,8 @@ export function buyerCosts(price: number, loan: number, s: MortgageSettings, nor
         : price > norms.starterExemptionMaxValue.value
           ? `boven grens startersvrijstelling, ${norms.transferTaxPct.value}%`
           : s.ageBuyer1 == null && s.ageBuyer2 == null
-            ? `${norms.transferTaxPct.value}% (vul leeftijd in voor startersvrijstelling)`
-            : `${norms.transferTaxPct.value}%`
+            ? `${pct(norms.transferTaxPct.value)} (vul leeftijd in voor startersvrijstelling)`
+            : `${pct(norms.transferTaxPct.value)}`
   const lines: CostLine[] = [
     { label: 'Overdrachtsbelasting', amount: tax.amount, note: taxNote },
     { label: 'Notaris (levering + hypotheekakte)', amount: s.costNotary },
@@ -62,7 +63,7 @@ export function buyerCosts(price: number, loan: number, s: MortgageSettings, nor
     {
       label: 'NHG-borgtochtprovisie',
       amount: withNhg ? (loan * norms.nhgFeePct.value) / 100 : 0,
-      note: withNhg ? `${norms.nhgFeePct.value}% van hypotheek` : s.withNhg ? 'hypotheek boven NHG-grens' : 'zonder NHG',
+      note: withNhg ? `${pct(norms.nhgFeePct.value)} van hypotheek` : s.withNhg ? 'hypotheek boven NHG-grens' : 'zonder NHG',
     },
     { label: 'Aankoopmakelaar', amount: s.costBuyingAgent },
     { label: 'Bankgarantie', amount: s.costBankGuarantee },

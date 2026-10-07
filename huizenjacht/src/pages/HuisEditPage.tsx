@@ -88,7 +88,7 @@ export function HuisEditPage({ id }: { id?: string }) {
             </select>
           </Field>
           <Field label="Bouwjaar">
-            <NumberInput value={h.buildYear} onChange={(x) => set('buildYear', x)} />
+            <NumberInput value={h.buildYear} grouping={false} onChange={(x) => set('buildYear', x)} />
           </Field>
           <Field label="VvE-bijdrage p/m">
             <NumberInput value={h.vveFee} onChange={(x) => set('vveFee', x)} suffix="€" />

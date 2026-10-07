@@ -182,6 +182,8 @@ export interface MaxMortgageInput {
   energySavingCosts: number | null
   ratePct: number
   fixedYears: number
+  /** Looptijd in jaren; korter dan de norm (30) geeft een hogere maandlast en dus minder leenruimte. */
+  termYears?: number
 }
 
 export interface MaxMortgageResult {
@@ -189,6 +191,9 @@ export interface MaxMortgageResult {
   toetsrente: number
   usedTestRate: boolean
   financingPct: number
+  /** Toetsinkomen of toetsrente valt buiten het bereik van de (verkorte) tabel */
+  outsideTable: boolean
+  termMonths: number
   maxHousingMonthly: number
   studentDebtFactor: number
   studentDebtCharge: number
@@ -216,7 +221,15 @@ export function maxMortgage(input: MaxMortgageInput, norms: Norms): MaxMortgageR
   const studentDebtCharge = Math.max(0, input.studentDebtMonthly ?? 0) * factor
   const otherLoansCharge = Math.max(0, input.otherLoansMonthly ?? 0)
   const availableMonthly = Math.max(0, maxHousingMonthly - studentDebtCharge - otherLoansCharge)
-  const incomeBased = annuityPrincipal(availableMonthly, toetsrente, norms.maxTermYears.value * MONTHS)
+  const termMonths = Math.min(input.termYears ?? norms.maxTermYears.value, norms.maxTermYears.value) * MONTHS
+  const incomeBased = annuityPrincipal(availableMonthly, toetsrente, termMonths)
+  const t = norms.financingTable.value
+  const lowestRateCol = t.rateUpperBounds.length > 1 ? t.rateUpperBounds[0] - (t.rateUpperBounds[1] - t.rateUpperBounds[0]) : 0
+  const outsideTable =
+    toetsrente > t.rateUpperBounds[t.rateUpperBounds.length - 1] ||
+    toetsrente <= lowestRateCol ||
+    toetsinkomen >= t.incomes[t.incomes.length - 1] + 5000 ||
+    (toetsinkomen > 0 && toetsinkomen < 30000)
 
   const label = input.energyLabel ?? 'geen'
   const energyLabelExtra = incomeBased > 0 ? norms.energyLabelExtra.value[label] ?? 0 : 0
@@ -228,6 +241,8 @@ export function maxMortgage(input: MaxMortgageInput, norms: Norms): MaxMortgageR
     toetsrente,
     usedTestRate,
     financingPct,
+    outsideTable,
+    termMonths,
     maxHousingMonthly,
     studentDebtFactor: factor,
     studentDebtCharge,

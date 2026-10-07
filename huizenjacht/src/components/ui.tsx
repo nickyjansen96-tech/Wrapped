@@ -18,15 +18,18 @@ export function NumberInput({
   placeholder,
   suffix,
   decimals = false,
+  grouping = true,
 }: {
   value: number | null | undefined
   onChange: (v: number | null) => void
   placeholder?: string
   suffix?: string
   decimals?: boolean
+  /** Duizendtalscheiding tonen (uit voor jaartallen) */
+  grouping?: boolean
 }) {
   const toText = (v: number | null | undefined) =>
-    v == null ? '' : v.toLocaleString('nl-NL', { maximumFractionDigits: decimals ? 3 : 0, useGrouping: !decimals && Math.abs(v) >= 10000 })
+    v == null ? '' : v.toLocaleString('nl-NL', { maximumFractionDigits: decimals ? 3 : 0, useGrouping: grouping && !decimals })
   const [text, setText] = useState(toText(value))
   const [focused, setFocused] = useState(false)
   useEffect(() => {

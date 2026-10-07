@@ -128,8 +128,6 @@ export interface MortgageSettings {
   income2: number | null
   ownFunds: number | null
   studentDebtMonthly: number | null
-  /** Rente van de studieschuld (DUO), bepaalt de weegfactor */
-  studentDebtRate: number | null
   otherLoansMonthly: number | null
   maxEnergyLabel: EnergyLabel | null
   /** Extra te lenen voor energiebesparende maatregelen (kosten) */

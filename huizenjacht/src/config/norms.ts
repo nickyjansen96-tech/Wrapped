@@ -13,6 +13,9 @@ export interface Sourced<T> {
   url?: string
   /** Datum waarop de waarde is gecontroleerd (JJJJ-MM-DD) */
   checked: string
+  /** false = niet (volledig) bij een officiële bron gecontroleerd */
+  verified?: boolean
+  note?: string
 }
 
 /**
@@ -95,6 +98,9 @@ export const DEFAULT_NORMS: Norms = {
       'Tijdelijke regeling hypothecair krediet, bijlage tabel 1 (Wijzigingsregeling hypothecair krediet 2026, Staatscourant 2025, 36471), op advies van Nibud',
     url: 'https://zoek.officielebekendmakingen.nl/stcrt-2025-36471.html',
     checked: CHECKED,
+    verified: false,
+    note:
+      'Voorlopige, verkorte tabel (rijen per € 5.000, rente 2,5–5,5%) uit een niet-officiële transcriptie; officiële bron was niet bereikbaar. Eén cel bevestigd (€ 50.000 / 4% = 22,6%). Vervang door de officiële tabel.',
   },
   testRate: {
     value: 5.0,
@@ -153,6 +159,7 @@ export const DEFAULT_NORMS: Norms = {
     checked: CHECKED,
   },
   energySavingExtra: {
+    note: 'Bevestigd: E/F/G € 20.000 (NHG, Rijksoverheid). Overige bedragen: Tijdelijke regeling, ongewijzigd t.o.v. 2025.',
     value: {
       'A++++': 0,
       'A+++': 0,
@@ -172,6 +179,8 @@ export const DEFAULT_NORMS: Norms = {
     checked: CHECKED,
   },
   studentDebtFactors: {
+    verified: false,
+    note: 'Gevonden via zoekresultaten die naar het Nibud-advies verwijzen; de pdf zelf was niet bereikbaar. Controleren in het Nibud-advies (bijlage studieschuld).',
     value: [
       [2.0, 1.05],
       [2.5, 1.1],
@@ -275,9 +284,12 @@ export const DEFAULT_NORMS: Norms = {
   },
 
   rates: {
-    value: { nhg10: 3.9, nhg20: 4.05, noNhg10: 4.1, noNhg20: 4.35 },
+    value: { nhg10: 4.25, nhg20: 4.7, noNhg10: 4.5, noNhg20: 4.95 },
     source:
-      'Indicatie laagste/gangbare tarieven grote aanbieders (rentevergelijkers), 100% marktwaarde. Altijd zelf actuele rente invullen.',
+      'Grootbanken met NHG per 5 okt. 2026 (hypotheekrente.nl: Rabobank 4,23% / 4,75%, ABN AMRO 4,33% / 4,71%, ING 4,41% / 4,68% voor 10 / 20 jaar). Kleinere aanbieders vanaf ca. 3,8–3,9% (10 jaar NHG). Zonder NHG bij 100% marktwaarde: ca. +0,25%-punt (schatting).',
+    url: 'https://www.hypotheekrente.nl/rente/10-jaar-rentevast/',
     checked: CHECKED,
+    verified: false,
+    note: 'Geen officiële bron: rentes verschillen per bank en per dag. Altijd zelf de actuele rente invullen.',
   },
 }

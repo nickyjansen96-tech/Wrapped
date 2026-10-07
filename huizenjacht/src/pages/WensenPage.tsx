@@ -227,6 +227,7 @@ function CriterionSheet({
             <Field label="Drempelwaarde">
               <NumberInput
                 value={c.auto.threshold}
+                grouping={c.auto.field !== 'buildYear'}
                 suffix={NUMERIC_FIELDS.find((f) => f.value === (c.auto?.kind === 'number' ? c.auto.field : ''))?.suffix}
                 onChange={(threshold) => c.auto?.kind === 'number' && setAuto({ ...c.auto, threshold })}
               />

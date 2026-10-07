@@ -12,7 +12,6 @@ export function defaultMortgage(): MortgageSettings {
     income2: null,
     ownFunds: null,
     studentDebtMonthly: null,
-    studentDebtRate: null,
     otherLoansMonthly: null,
     maxEnergyLabel: null,
     energySavingCosts: null,

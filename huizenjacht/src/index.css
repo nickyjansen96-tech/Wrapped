@@ -12,6 +12,8 @@
   --danger-soft: #fbe9e7;
   --warn-soft: #fff4dc;
   --ok: #2e7d4f;
+  --series-bruto: #c27c0e;
+  --series-netto: #00805f;
   --radius: 14px;
   --tabbar-h: 64px;
   color-scheme: light;
@@ -37,6 +39,8 @@
     --danger-soft: #3a2220;
     --warn-soft: #3a3120;
     --ok: #6fcf97;
+    --series-bruto: #c98420;
+    --series-netto: #2a9d7a;
     color-scheme: dark;
   }
 }
@@ -210,8 +214,8 @@ input[type='range'] { width: 100%; accent-color: var(--primary); }
 .filters select { width: auto; min-height: 38px; padding: 6px 10px; font-size: 0.88rem; }
 
 .table-wrap { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
-th, td { padding: 6px 6px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table { border-collapse: collapse; width: 100%; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; }
 th { font-weight: 600; color: var(--muted); }
 
@@ -230,3 +234,14 @@ th { font-weight: 600; color: var(--muted); }
 details > summary { cursor: pointer; font-weight: 600; }
 .source { font-size: 0.75rem; color: var(--muted); }
 .chart { width: 100%; height: auto; display: block; }
+
+.chart-wrap { position: relative; }
+.chart-legend { display: flex; gap: 14px; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+.chart-legend span::before { content: ''; display: inline-block; width: 12px; height: 2px; margin-right: 6px; vertical-align: middle; background: var(--c); }
+.chart-tip {
+  position: absolute; top: 0; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 8px; font-size: 0.78rem; box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); white-space: nowrap;
+}
+.chart-tip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; background: var(--c); }
+.chart text { fill: var(--muted); font-size: 10px; }
+.chart .grid { stroke: var(--border); stroke-width: 1; }
