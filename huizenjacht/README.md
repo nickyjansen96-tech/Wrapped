@@ -25,19 +25,27 @@ cd huizenjacht
 npm install
 npm run dev        # ontwikkelserver op http://localhost:5173
 npm test           # unit tests (Vitest)
-npm run build      # productieversie in dist/
+npm run build      # productieversie in app/ (wordt online gezet)
 npm run preview    # productieversie lokaal bekijken
 ```
 
 Open de app op je telefoon in hetzelfde wifi-netwerk met `npm run dev -- --host` en
 het adres dat Vite toont.
 
-### Op je telefoon installeren
+### Online en op je telefoon
 
-De map `dist/` (na `npm run build`) is een statische site. Je kunt hem op elke
-statische host zetten (GitHub Pages, Netlify, een eigen server). De paden zijn
-relatief, dus een submap werkt ook. Open de site daarna op je telefoon en kies
-**Zet op beginscherm** (iPhone: deelknop; Android: menu ⋮).
+De app staat op **https://nickyjansen96-tech.github.io/Wrapped/huizenjacht/app/**.
+GitHub Pages publiceert de branch `claude/stock-app-calendar-feed-a8vjd6` (zie ook
+het Huishoudboek). Op die site staan alleen de app-bestanden. Jullie gegevens
+blijven op je eigen telefoon.
+
+Een nieuwe versie zet je online met `npm run build`. Dat schrijft de app naar
+`huizenjacht/app/`. Commit die map en push hem naar die branch.
+
+Op je telefoon: open de link en kies **Zet op beginscherm** (iPhone: Safari →
+deelknop; Android: Chrome → menu ⋮ → *App installeren*). Let op: Safari en het
+icoon op je beginscherm hebben ieder hun eigen opslag. Gebruik dus steeds het
+icoon, of zet je data over met exporteren en importeren.
 
 ## Data, back-up en delen
 
