@@ -26,7 +26,7 @@ export function NumberInput({
   decimals?: boolean
 }) {
   const toText = (v: number | null | undefined) =>
-    v == null ? '' : v.toLocaleString('nl-NL', { maximumFractionDigits: decimals ? 3 : 0, useGrouping: !decimals })
+    v == null ? '' : v.toLocaleString('nl-NL', { maximumFractionDigits: decimals ? 3 : 0, useGrouping: !decimals && Math.abs(v) >= 10000 })
   const [text, setText] = useState(toText(value))
   const [focused, setFocused] = useState(false)
   useEffect(() => {
