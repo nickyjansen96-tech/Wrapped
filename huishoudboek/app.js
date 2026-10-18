@@ -11,7 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="17";
+const APP_VERSION="18";
 const TABS=["overzicht","vermogen","transacties","regels","importeren","gebruikers"];
 
 /* ---------- toestand ---------- */
@@ -172,6 +172,8 @@ function viewTx(main){
   main.append(el("div",{class:"tools field"},
     el("input",{id:"ftext",class:"grow",type:"search",placeholder:"Zoeken",value:S.fText,oninput:e=>{S.fText=e.target.value;S.shown=50;clearTimeout(viewTx.t);viewTx.t=setTimeout(()=>{render();const i=$("#ftext");i.focus();i.setSelectionRange(i.value.length,i.value.length);},250);}}),
     fsel, (unkCount||S.fUnk)?el("button",{class:"chip toggle",id:"funk","aria-pressed":S.fUnk,onclick:()=>{S.fUnk=!S.fUnk;S.shown=50;render();}},"Zonder categorie ("+unkCount+")"):null));
+  const allUnk=S.tx.filter(t=>catOf(t)===UNK).length;
+  if(allUnk)main.append(el("div",{class:"note"},el("span",{},nTx(allUnk)+" zonder categorie. Laat een AI-chat zoals Claude of ChatGPT regels maken, of kies hieronder zelf."),aiButton()));
   const sum=list.reduce((s,t)=>s+t.a,0);
   if(!list.length){main.append(el("div",{class:"empty"},"Geen transacties voor deze selectie."));return;}
   const sec=el("section",{class:"group"});
@@ -267,23 +269,28 @@ function readAnswer(text){ const r=parseAI(text);
   if(!r){ S.ai.msg="Hierin vond de app geen regels. Kopieer het hele antwoord van de AI-chat, of vraag om een codeblok met één regel per trefwoord: trefwoord | categorie."; }
   else{ for(const x of r)x.hits=suggestionHits(x); S.ai.sugg=r; S.ai.msg=""; } render(); }
 const AI_CHATS=[{name:"Claude",url:"https://claude.ai/new"},{name:"ChatGPT",url:"https://chatgpt.com/"}];
+// Knop die vanaf elk scherm naar "Laat AI indelen" gaat.
+function goAI(){ S.tab="regels"; S.ai.msg=""; go(); }
+const aiButton=(label="Laat AI indelen",cls="btn sm pri")=>el("button",{class:cls,onclick:goAI},"✨ "+label);
 function viewAI(main){
   const unk=S.tx.filter(t=>catOf(t)===UNK).length, prompt=unk?aiPrompt():null, sg=S.ai.sugg;
-  const card=el("div",{class:"card",id:"ai-card"},el("div",{},el("h2",{},"Laat AI regels maken"),
-    el("div",{class:"prose"},(unk?nTx(unk)+(unk===1?" heeft":" hebben")+" nog geen categorie. ":"Alle transacties hebben een categorie. ")+"Werkt met Claude, ChatGPT of een andere AI-chat.")));
-  if(prompt||S.ai.open||sg){ const tools=el("div",{class:"tools"});
-    if(prompt){ tools.append(el("button",{class:"btn pri",onclick:async()=>{ const ok=await copyText(prompt); S.ai.msg=ok?"Gekopieerd. Open een AI-chat, plak de vraag in een nieuw gesprek en kopieer daarna het antwoord.":"Kopiëren lukte niet; selecteer de vraag hieronder en kopieer hem zelf."; S.ai.showPrompt=!ok; S.ai.open=true; render(); }},"1. Vraag kopiëren"));
-      if(navigator.share)tools.append(el("button",{class:"btn",onclick:async()=>{ try{ await navigator.share({text:prompt}); S.ai.open=true; render(); }catch(e){} }},"Delen"));
-      for(const c of AI_CHATS)tools.append(el("a",{class:"btn",href:c.url,target:"_blank",rel:"noopener"},c.name+" ↗")); }
-    card.append(tools); }
-  if(prompt)card.append(el("button",{class:"linkbtn",onclick:()=>{S.ai.showPrompt=!S.ai.showPrompt;render();}},S.ai.showPrompt?"Vraag verbergen":"Wat wordt gedeeld?"));
-  if(S.ai.showPrompt&&prompt)card.append(el("p",{class:"prose"},"Per tegenpartij: naam, soort betaling, aantal, bedragen, periode en voorbeelden van de omschrijving. Rekeningnummers, pasnummers en kenmerken worden weggelaten."),el("textarea",{class:"txt area",readonly:true,rows:10,"aria-label":"Vraag voor de AI-chat",onfocus:e=>e.target.select()},prompt));
+  const card=el("div",{class:"card ai",id:"ai-card"},el("div",{class:"aihead"},el("span",{class:"aiicon","aria-hidden":"true"},"✨"),el("div",{},el("h2",{},"Transacties laten indelen door AI"),
+    el("div",{class:"prose"},!S.tx.length?"Lees eerst je bankexport in; daarna kan een AI-chat zoals Claude of ChatGPT regels voor je maken.":
+      unk?nTx(unk)+(unk===1?" heeft":" hebben")+" nog geen categorie. Een AI-chat zoals Claude of ChatGPT maakt er regels voor, in drie stappen.":"Alle transacties hebben een categorie. Lees je nieuwe transacties in; daarna kun je hier weer regels laten maken."))));
   if(S.ai.msg)card.append(el("div",{class:"note info",role:"status"},S.ai.msg));
-  if(!sg&&(prompt||S.ai.open)){
-    const area=el("textarea",{class:"txt area",id:"ai-answer",rows:4,placeholder:"2. Plak hier het antwoord van de AI-chat","aria-label":"Antwoord van de AI-chat",oninput:e=>{S.ai.text=e.target.value;}},S.ai.text);
-    const tools=el("div",{class:"tools"},el("button",{class:"btn pri",onclick:()=>readAnswer(S.ai.text)},"Antwoord inlezen"));
-    if(navigator.clipboard&&navigator.clipboard.readText)tools.append(el("button",{class:"btn",onclick:async()=>{ try{ const t=await navigator.clipboard.readText(); if(t){ S.ai.text=t; readAnswer(t); return; } }catch(e){} S.ai.msg="Plakken lukte niet; houd het vak hierboven ingedrukt en kies Plakken."; render(); }},"Plakken en inlezen"));
-    card.append(area,tools); }
+  if(prompt&&!sg){
+    const step=(n,title,...body)=>el("div",{class:"aistep"},el("span",{class:"aino"},n),el("div",{class:"aibody"},el("div",{class:"aititle"},title),...body));
+    card.append(step(1,"Kopieer de vraag",el("div",{class:"tools"},
+        el("button",{class:"btn pri",onclick:async()=>{ const ok=await copyText(prompt); S.ai.msg=ok?"Gekopieerd! Ga nu naar stap 2.":"Kopiëren lukte niet; selecteer de vraag hieronder en kopieer hem zelf."; S.ai.showPrompt=!ok; render(); }},"Vraag kopiëren"),
+        navigator.share?el("button",{class:"btn",onclick:async()=>{ try{ await navigator.share({text:prompt}); }catch(e){} }},"Delen"):null,
+        el("button",{class:"linkbtn",onclick:()=>{S.ai.showPrompt=!S.ai.showPrompt;render();}},S.ai.showPrompt?"Vraag verbergen":"Wat wordt gedeeld?")),
+        S.ai.showPrompt?el("p",{class:"prose"},"Per tegenpartij: naam, soort betaling, aantal, bedragen, periode en voorbeelden van de omschrijving. Rekeningnummers, pasnummers en kenmerken worden weggelaten."):null,
+        S.ai.showPrompt?el("textarea",{class:"txt area",readonly:true,rows:10,"aria-label":"Vraag voor de AI-chat",onfocus:e=>e.target.select()},prompt):null),
+      step(2,"Plak hem in een nieuw gesprek met een AI-chat en kopieer het antwoord",el("div",{class:"tools"},...AI_CHATS.map(c=>el("a",{class:"btn",href:c.url,target:"_blank",rel:"noopener"},c.name+" openen ↗")))),
+      step(3,"Plak het antwoord hier",
+        el("textarea",{class:"txt area",id:"ai-answer",rows:3,placeholder:"Plak hier het antwoord van de AI-chat","aria-label":"Antwoord van de AI-chat",oninput:e=>{S.ai.text=e.target.value;}},S.ai.text),
+        el("div",{class:"tools"},navigator.clipboard&&navigator.clipboard.readText?el("button",{class:"btn pri",onclick:async()=>{ try{ const t=await navigator.clipboard.readText(); if(t){ S.ai.text=t; readAnswer(t); return; } }catch(e){} S.ai.msg="Plakken lukte niet; houd het vak ingedrukt, kies Plakken en tik op Antwoord inlezen."; render(); }},"Plakken en inlezen"):null,
+          el("button",{class:"btn",onclick:()=>readAnswer(S.ai.text)},"Antwoord inlezen")))); }
   if(sg){ const sec=el("section",{class:"group sugg"});
     for(const x of sg){ sec.append(el("div",{class:"rule"},
       el("label",{class:"pick"},el("input",{type:"checkbox",checked:x.ok,"aria-label":"Regel gebruiken",onchange:e=>{x.ok=e.target.checked;render();}}),
@@ -296,7 +303,7 @@ function viewAI(main){
       const add=sg.filter(x=>x.ok&&x.k.trim()&&!x.badCat).map(x=>({k:x.k.trim(),c:x.c})); const before=S.tx.filter(t=>catOf(t)===UNK).length;
       S.rules.push(...add); compileRules(); saveRules(); const after=S.tx.filter(t=>catOf(t)===UNK).length;
       S.ai={text:"",sugg:null,msg:add.length+(add.length===1?" regel":" regels")+" toegevoegd; "+nTx(before-after)+" ingedeeld"+(after?", "+after+" nog niet. Herhaal de stappen voor de rest.":".")}; render(); }},
-      n+(n===1?" regel":" regels")+" toevoegen"),el("button",{class:"btn",onclick:()=>{S.ai={text:"",sugg:null,msg:"",open:true};render();}},"Annuleren")));
+      n+(n===1?" regel":" regels")+" toevoegen"),el("button",{class:"btn",onclick:()=>{S.ai={text:"",sugg:null,msg:""};render();}},"Annuleren")));
   }
   main.append(card); }
 
@@ -355,7 +362,7 @@ function viewStatus(main){
       el("button",{class:"btn"+(hasB?"":" pri"),id:"budget-btn",onclick:()=>{S.editBudget=true;render();window.scrollTo(0,0);}},hasB?"Budget bewerken":"Budget invullen")),
     el("div",{class:"stats"},stat("Inkomsten",A.inc,B.inc),stat("Uitgaven",A.uit,B.uit),stat("Gespaard",A.sp,B.sp))));
   if(!S.tx.length){ main.append(el("div",{class:"note info"},"Nog geen transacties ingelezen.",el("button",{class:"btn sm",onclick:()=>{S.tab="importeren";go();}},"Importeren"))); return; }
-  if(x.unkN[x.m])main.append(el("div",{class:"note"},nTx(x.unkN[x.m])+" zonder categorie (wel meegeteld in Over)",el("button",{class:"btn sm",onclick:()=>{S.tab="transacties";S.fUnk=true;S.fCat="";S.shown=50;go();}},"Toewijzen")));
+  if(x.unkN[x.m])main.append(el("div",{class:"note"},el("span",{},nTx(x.unkN[x.m])+" zonder categorie (wel meegeteld in Over)"),el("span",{class:"tools"},aiButton(),el("button",{class:"btn sm",onclick:()=>{S.tab="transacties";S.fUnk=true;S.fCat="";S.shown=50;go();}},"Zelf toewijzen"))));
   let hidden=0;
   GROUPS.forEach(grp=>{ const rows=[]; let ga=0,gb=0;
     for(const c of grp.cats){ const a=actOf(x,grp,c), b=cmpBudget(x,c); ga+=a; gb+=b;
@@ -545,7 +552,9 @@ function viewImport(main){
     el("h2",{},"Bankexport inlezen"),el("div",{class:"prose"},"ABN AMRO, Excel of TXT. Dubbele transacties worden overgeslagen."),
     el("button",{class:"btn pri",onclick:()=>inp.click()},"Bestand kiezen"),inp);
   main.append(drop);
-  if(S.importMsg)main.append(el("div",{class:"note info",role:"status"},S.importMsg, S.tx.length?el("button",{class:"btn sm",onclick:()=>{S.tab="overzicht";go();}},"Naar overzicht"):null));
+  if(S.importMsg){ const u=S.tx.filter(t=>catOf(t)===UNK).length;
+    main.append(el("div",{class:"note info",role:"status"},el("span",{},S.importMsg+(u?" "+nTx(u)+(u===1?" heeft":" hebben")+" nog geen categorie.":"")),
+      S.tx.length?el("span",{class:"tools"},u?aiButton():null,el("button",{class:"btn sm",onclick:()=>{S.tab="overzicht";go();}},"Naar overzicht")):null)); }
   const binp=el("input",{type:"file",id:"bfile",accept:".json,application/json",hidden:true,onchange:e=>{if(e.target.files[0])restoreBackup(e.target.files[0]);e.target.value="";}});
   main.append(el("div",{class:"card",id:"backup-card"},el("h2",{},"Back-up van "+profileName()),
     el("p",{class:"prose"},"Je gegevens staan alleen op dit toestel. Maak af en toe een back-up."),
@@ -589,7 +598,7 @@ const TOUR=[
   {target:"#tabs",title:"De onderdelen",text:"Met deze tabbladen ga je naar je overzicht en budget, je vermogen, je transacties, je regels en het inlezen van bankbestanden."},
   {tab:"importeren",target:".drop .btn.pri",title:"1. Lees je bankexport in",text:"Download bij ABN AMRO je mutaties als Excel of TXT en kies dat bestand hier. Je mag overlappende periodes inlezen; dubbele transacties worden overgeslagen."},
   {tab:"transacties",target:"#tabs [data-tab=transacties]",title:"2. Controleer je transacties",text:"Hier zie je alles wat je hebt ingelezen. Kies per transactie een categorie, of tik op + om er een regel van te maken, zodat het voortaan vanzelf gaat."},
-  {tab:"regels",target:"#ai-card",title:"3. Laat AI helpen",text:"Veel transacties zonder categorie? Kopieer de vraag, plak hem in Claude, ChatGPT of een andere AI-chat en plak het antwoord terug. Jij kiest welke regels erbij komen."},
+  {tab:"regels",target:"#ai-card",title:"3. Laat AI je transacties indelen",text:"In het tabblad Regels en AI maakt een AI-chat zoals Claude of ChatGPT regels voor je, in drie stappen: vraag kopiëren, in de chat plakken, antwoord terugplakken. De knop ✨ Laat AI indelen brengt je hier vanaf elk scherm."},
   {tab:"overzicht",target:"#budget-btn",title:"4. Vul je budget in",text:"In een tabel met een rij per categorie en een kolom per maand. Bij Elke maand vul je één bedrag in voor het hele jaar."},
   {tab:"overzicht",target:".hero",title:"5. Zie hoe je ervoor staat",text:"Bovenaan staat wat er over is in de gekozen maand of het jaar. Daaronder per categorie wat je uitgaf ten opzichte van je budget; rood betekent erover."},
   {tab:"importeren",target:"#backup-card",title:"Maak af en toe een back-up",text:"Je gegevens staan alleen op dit toestel. Met een back-up raak je niets kwijt en kun je overstappen naar een ander toestel."},

@@ -292,3 +292,12 @@ body:has(.tour-spot:not([hidden]))::before{content:"";position:fixed;inset:0;z-i
 .linkbtn.small{padding:6px 0}
 a.btn{text-decoration:none;display:inline-flex;align-items:center}
 #ai-card{gap:10px}
+/* AI-blok */
+.card.ai{background:linear-gradient(180deg,#eef4ff,#ffffff 70%);box-shadow:0 0 0 1px #cfe0ff inset}
+.aihead{display:flex;gap:12px;align-items:flex-start}
+.aiicon{font-size:26px;line-height:1.1}
+.aistep{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;padding-top:12px;border-top:.5px solid var(--line)}
+.aino{width:28px;height:28px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:14px;display:grid;place-items:center}
+.aibody{display:flex;flex-direction:column;gap:8px;min-width:0}
+.aititle{font-weight:600;padding-top:3px}
+.note .tools{gap:8px}

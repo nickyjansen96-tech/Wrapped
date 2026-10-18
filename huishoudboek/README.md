@@ -49,8 +49,10 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
 
 ## Regels laten maken door een AI-chat
 
-Bovenaan het tabblad *Regels*, bij *Laat AI regels maken*. Werkt met Claude,
-ChatGPT of elke andere AI-chat:
+In het tabblad **Regels en AI**, bij *Transacties laten indelen door AI*. De
+knop **✨ Laat AI indelen** staat ook op het overzicht, bij Transacties en na
+het inlezen, zodra er transacties zonder categorie zijn. Werkt met Claude,
+ChatGPT of elke andere AI-chat, in drie stappen:
 
 1. **Vraag kopiëren** (of **Delen** naar de app van je keuze). De vraag bevat
    per tegenpartij zonder categorie: naam (filialen samengenomen), soort
