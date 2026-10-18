@@ -44,10 +44,12 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   (en het budget). Daaronder per categorie wat je uitgaf, het budget en een
   balk (rood als je erover zit). Lege categorieën zijn verborgen. Tik op een
   categorie voor de transacties.
-- **Budget bewerken:** per categorie een bedrag per maand of per jaar (het
-  andere rekent mee; Enter gaat naar de volgende). Tik op het gemiddelde om
-  het over te nemen, of vul alle lege velden ermee. Met › vul je per maand
-  afwijkende bedragen in. Ook: budget van vorig jaar overnemen of wissen.
+- **Budget bewerken:** een tabel met een rij per categorie en een kolom per
+  maand, plus *Elke maand* (één bedrag voor het hele jaar) en het jaartotaal.
+  Per groep een totaalrij en onderaan *Over* per maand. Enter en de pijltjes
+  verplaatsen je door de tabel; je kunt ook een blok getallen uit Excel of
+  Numbers plakken. Verder: lege rijen vullen met je gemiddelde, budget van
+  vorig jaar overnemen, wissen.
 - Bij *Heel jaar* vergelijkt de app met het budget van de maanden waarover je
   transacties hebt ingelezen.
 

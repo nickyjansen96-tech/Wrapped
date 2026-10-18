@@ -11,7 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="10";
+const APP_VERSION="11";
 const TABS=["overzicht","vermogen","transacties","regels","importeren"];
 
 /* ---------- toestand ---------- */
@@ -129,6 +129,8 @@ function render(){
   for(const b of document.querySelectorAll("#tabs button"))b.setAttribute("aria-selected",b.dataset.tab===S.tab);
   const cur=document.querySelector('#tabs button[aria-selected="true"]'); if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:"nearest",inline:"nearest"});
   $("#back").hidden=!(history.state&&history.state.n>0);
+  // De budgettabel krijgt de volle schermbreedte, zodat alle maanden ernaast passen.
+  for(const w of document.querySelectorAll(".wrap"))w.classList.toggle("wide",S.tab==="overzicht"&&!!S.editBudget);
   renderProfiles(); renderRail(); const main=$("#main"); main.replaceChildren();
   if(!S.ready){main.append(el("div",{class:"empty"},"Gegevens laden…"));return;}
   ({overzicht:viewOverview,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport})[S.tab](main);
@@ -326,42 +328,56 @@ function catLine(grp,c,a,b){ const over=grp.kind==="uit"&&b>0&&a>b+0.5, p=b>0?Ma
     el("span",{class:"cv"},el("span",{class:"num"+(over?" neg":"")},f0(a)),el("span",{class:"of"},b>0?"van "+eur0.format(b):"geen budget")),
     b>0?el("span",{class:"bar"+(over?" over":"")},el("i",{style:"width:"+(p*100)+"%"})):null); }
 
-/* budget bewerken */
-function budgetSummary(Y){ const P=kinds(c=>budgetOf(Y,c,0)/12), rest=P.inc-P.uit-P.sp;
-  return el("div",{class:"bsum",id:"bsum"},el("span",{},"Per maand: in ",el("b",{},eur0.format(P.inc))),el("span",{},"uit ",el("b",{},eur0.format(P.uit))),el("span",{},"sparen ",el("b",{},eur0.format(P.sp))),
-    el("span",{},"over ",el("b",{class:rest<-0.5?"neg":"pos"},eur0.format(rest)))); }
-function editName(Y,ref,grp,c){ const i=ALLCATS.indexOf(c), a=ref.avg(grp,c);
-  return el("div",{class:"en",id:"en-"+i},el("span",{},c),el("span",{class:"sub"},
-    ref.year!=null&&a>=0.5?el("button",{class:"refbtn",title:"Overnemen als budget per maand",onclick:()=>{ setYearBudget(Y,c,{month:roundBudget(a)}); render(); }},"gem. "+eur0.format(a)):null,
-    hasOwnMonths(Y,c)?el("span",{class:"tag"},"per maand anders"):null)); }
-function editRow(Y,ref,grp,c){ const i=ALLCATS.indexOf(c), b=(S.budgets[Y]||{})[c], open=S.bOpen===c;
-  const inp=(id,col,val,label,on)=>el("input",{class:"bin",id,"data-col":col,type:"text",inputmode:"decimal",enterkeyhint:"next",placeholder:"",value:fmtIn(val),"aria-label":label,onkeydown:nextOnEnter,onchange:on});
-  const pm=inp("bm-"+i,"m",b?b.base||0:0,c+" per maand",e=>{ setYearBudget(Y,c,{month:parseAmount(e.target.value)}); e.target.value=fmtIn(parseAmount(e.target.value)); editRefresh(Y,ref,grp,c); });
-  const pj=inp("by-"+i,"y",budgetOf(Y,c,0),c+" per jaar",e=>{ if(hasOwnMonths(Y,c)&&!confirm("De afwijkende maanden van "+c+" worden gelijk verdeeld. Doorgaan?")){e.target.value=fmtIn(budgetOf(Y,c,0));return;}
-    setYearBudget(Y,c,{yearTotal:parseAmount(e.target.value)}); e.target.value=fmtIn(budgetOf(Y,c,0)); editRefresh(Y,ref,grp,c); });
-  const wrap=el("div",{class:"erw"},el("div",{class:"erow"},editName(Y,ref,grp,c),pm,pj,
-    el("button",{class:"btn sm exp","aria-expanded":open,"aria-label":"Per maand anders voor "+c,title:"Per maand anders",onclick:()=>{S.bOpen=open?null:c;render();}},open?"⌄":"›")));
-  if(open){ const grid=el("div",{class:"bmonths"});
-    MONTHS.forEach((mn,k)=>{ const own=b&&b.m&&b.m[k+1]!=null;
-      grid.append(el("label",{class:own?"diff":""},mn,inp("bmm-"+i+"-"+(k+1),"mm"+i,budgetOf(Y,c,k+1),c+" "+MONTHS_LONG[k],e=>{ setMonthBudget(Y,c,k+1,parseAmount(e.target.value)); e.target.value=fmtIn(budgetOf(Y,c,k+1)); editRefresh(Y,ref,grp,c); }))); });
-    wrap.append(el("div",{class:"bmwrap"},grid,el("button",{class:"btn sm",onclick:()=>{ const cur=(S.budgets[Y]||{})[c]; if(cur){cur.m={};saveBudgets();} render(); }},"Alle maanden gelijk"))); }
-  return wrap; }
-// Werkt na een wijziging alleen de bedragen bij, zonder de pagina opnieuw op te bouwen: zo blijven cursor en toetsenbord in het volgende veld.
-function editRefresh(Y,ref,grp,c){ const i=ALLCATS.indexOf(c), act=document.activeElement, b=(S.budgets[Y]||{})[c];
-  const pm=$("#bm-"+i), pj=$("#by-"+i); if(pm&&pm!==act)pm.value=fmtIn(b?b.base||0:0); if(pj&&pj!==act)pj.value=fmtIn(budgetOf(Y,c,0));
-  for(let k=1;k<=12;k++){ const e=$("#bmm-"+i+"-"+k); if(!e)break; if(e!==act)e.value=fmtIn(budgetOf(Y,c,k)); e.parentNode.classList.toggle("diff",b?.m?.[k]!=null); }
-  $("#en-"+i)?.replaceWith(editName(Y,ref,grp,c)); $("#bsum")?.replaceWith(budgetSummary(Y)); }
+/* budget bewerken: een tabel met een rij per categorie en een kolom per maand */
+// Kolom 0 is "Elke maand": daar vul je één bedrag in voor alle maanden. Kolommen 1–12 zijn de maanden zelf.
+function setAllMonths(Y,c,v){ const y=S.budgets[Y]||(S.budgets[Y]={}); if(v>0)y[c]={base:v,m:{}}; else delete y[c]; saveBudgets(); }
+const cellId=(i,k)=>"g-"+i+"-"+k;
+const monthSum=(grp,Y,k)=>grp.cats.reduce((s,c)=>s+budgetOf(Y,c,k),0);
+function overOf(Y,k){ const f=gi=>monthSum(GROUPS[gi],Y,k); return f(0)-f(1)-f(2)-f(3)-f(4); }
+const gridNum=v=>Math.abs(v)<0.5?"":eur0.format(v).replace("€","").trim();
+// Na een wijziging alleen de getallen bijwerken, zodat cursor en toetsenbord in het volgende vak blijven.
+function gridRefresh(Y,c){ const i=ALLCATS.indexOf(c), gi=GROUPS.findIndex(g=>g.cats.includes(c)), b=(S.budgets[Y]||{})[c], act=document.activeElement;
+  const all=$("#"+cellId(i,0)); if(all&&all!==act)all.value=fmtIn(b?b.base||0:0);
+  for(let k=1;k<=12;k++){ const e=$("#"+cellId(i,k)); if(!e)continue; if(e!==act)e.value=fmtIn(budgetOf(Y,c,k)); e.classList.toggle("diff",!!(b&&b.base&&b.m&&b.m[k]!=null)); }
+  const t=$("#gy-"+i); if(t)t.textContent=gridNum(budgetOf(Y,c,0));
+  for(let k=0;k<=12;k++){ const g=$("#gs-"+gi+"-"+k); if(g)g.textContent=gridNum(monthSum(GROUPS[gi],Y,k));
+    const o=$("#ov-"+k); if(o){ const v=overOf(Y,k); o.textContent=Math.abs(v)<0.5?"":eur0.format(v); o.className="num "+(v<-0.5?"neg":"pos"); } } }
+// Pijltjes en Enter verplaatsen je door de tabel, zoals in een spreadsheet.
+function gridKey(e){ const [,i,k]=e.target.id.split("-").map(Number); let ni=i,nk=k;
+  if(e.key==="Enter"||e.key==="ArrowDown")ni=i+1; else if(e.key==="ArrowUp")ni=i-1;
+  else if(e.key==="ArrowRight"&&e.target.selectionEnd===e.target.value.length)nk=k+1; else if(e.key==="ArrowLeft"&&e.target.selectionStart===0)nk=k-1; else return;
+  const n=$("#"+cellId(ni,nk)); if(!n){ if(e.key==="Enter")e.preventDefault(); return; } e.preventDefault(); n.focus(); n.select(); }
+// Plakken uit Excel of Numbers: meerdere getallen (tabs en regels) vullen de tabel vanaf dit vak.
+function gridPaste(e,Y){ const txt=(e.clipboardData||window.clipboardData)?.getData("text")||""; if(!/[\t\n]/.test(txt.trim()))return; e.preventDefault();
+  const [,i0,k0]=e.target.id.split("-").map(Number);
+  txt.replace(/\r/g,"").split("\n").filter((l,j,a)=>l!==""||j<a.length-1).forEach((line,r)=>{ const c=ALLCATS[i0+r]; if(!c)return;
+    line.split("\t").forEach((val,j)=>{ const k=k0+j; if(k>12)return; const v=parseAmount(val); if(k===0)setAllMonths(Y,c,v); else setMonthBudget(Y,c,k,v); }); });
+  render(); }
 function viewBudgetEdit(main){
   const Y=S.year, ref=budgetRef(Y), yb=S.budgets[Y]||{};
   const more=[];
-  if(ref.year!=null)more.push(el("button",{class:"btn sm",onclick:()=>{ for(const grp of GROUPS)for(const c of grp.cats){ if(budgetOf(Y,c,0))continue; const a=ref.avg(grp,c); if(a>=1)setYearBudget(Y,c,{month:roundBudget(a)}); } render(); }},"Lege vullen met gemiddelde"));
+  if(ref.year!=null)more.push(el("button",{class:"btn sm",onclick:()=>{ for(const grp of GROUPS)for(const c of grp.cats){ if(budgetOf(Y,c,0))continue; const a=ref.avg(grp,c); if(a>=1)setAllMonths(Y,c,roundBudget(a)); } render(); }},"Lege rijen vullen met gemiddelde "+ref.year));
   if(S.budgets[Y-1]&&Object.keys(S.budgets[Y-1]).length)more.push(el("button",{class:"btn sm",onclick:()=>{ if(Object.keys(yb).length&&!confirm("Het budget van "+Y+" wordt vervangen door dat van "+(Y-1)+". Doorgaan?"))return; S.budgets[Y]=JSON.parse(JSON.stringify(S.budgets[Y-1])); saveBudgets(); render(); }},"Neem "+(Y-1)+" over"));
   if(Object.keys(yb).length)more.push(el("button",{class:"btn sm",onclick:()=>{ if(!confirm("Alle budgetten van "+Y+" wissen?"))return; delete S.budgets[Y]; saveBudgets(); render(); }},"Wissen"));
-  main.append(el("div",{class:"card"},el("div",{class:"herotop"},el("h2",{},"Budget "+Y),el("button",{class:"btn pri",onclick:()=>{S.editBudget=false;S.bOpen=null;render();window.scrollTo(0,0);}},"Klaar")),
-    budgetSummary(Y),more.length?el("div",{class:"tools"},...more):null));
-  GROUPS.forEach(grp=>{ main.append(el("section",{class:"group"},
-    el("div",{class:"erow head"},el("span",{class:"en"},grp.name),el("span",{class:"h"},"Per maand"),el("span",{class:"h"},"Per jaar"),el("span",{})),
-    ...grp.cats.map(c=>editRow(Y,ref,grp,c)))); });
+  main.append(el("div",{class:"card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Budget "+Y),el("div",{class:"prose"},"Vul bij ",el("b",{},"Elke maand")," één bedrag in voor het hele jaar, of per maand een eigen bedrag.")),
+    el("button",{class:"btn pri",onclick:()=>{S.editBudget=false;render();window.scrollTo(0,0);}},"Klaar")),more.length?el("div",{class:"tools"},...more):null));
+  const head=el("tr",{},el("th",{class:"cat"},""),el("th",{class:"all"},"Elke maand"),...MONTHS.map(m=>el("th",{},m)),el("th",{class:"yr"},"Jaar"));
+  const body=el("tbody");
+  GROUPS.forEach((grp,gi)=>{
+    body.append(el("tr",{class:"grp"},el("th",{class:"cat"},grp.name),el("td",{colspan:14})));
+    for(const c of grp.cats){ const i=ALLCATS.indexOf(c), b=yb[c];
+      const cellIn=(k,val,label,on,cls)=>el("td",{class:cls||""},el("input",{id:cellId(i,k),type:"text",inputmode:"decimal",enterkeyhint:"next",autocomplete:"off",value:fmtIn(val),"aria-label":label,
+        class:(k&&b&&b.base&&b.m&&b.m[k]!=null)?"diff":"",onkeydown:gridKey,onpaste:e=>gridPaste(e,Y),onfocus:e=>e.target.select(),onchange:on}));
+      body.append(el("tr",{},el("th",{class:"cat",scope:"row"},c),
+        cellIn(0,b?b.base||0:0,c+" elke maand",e=>{ setAllMonths(Y,c,parseAmount(e.target.value)); e.target.value=fmtIn(parseAmount(e.target.value)); gridRefresh(Y,c); },"all"),
+        ...MONTHS.map((m,j)=>cellIn(j+1,budgetOf(Y,c,j+1),c+" "+MONTHS_LONG[j],e=>{ setMonthBudget(Y,c,j+1,parseAmount(e.target.value)); e.target.value=fmtIn(budgetOf(Y,c,j+1)); gridRefresh(Y,c); })),
+        el("td",{class:"yr num",id:"gy-"+i},gridNum(budgetOf(Y,c,0))))); }
+    body.append(el("tr",{class:"sum"},el("th",{class:"cat"},"Totaal"),el("td",{class:"all"}),...MONTHS.map((m,j)=>el("td",{class:"num",id:"gs-"+gi+"-"+(j+1)},gridNum(monthSum(grp,Y,j+1)))),
+      el("td",{class:"yr num",id:"gs-"+gi+"-0"},gridNum(monthSum(grp,Y,0))))); });
+  const ov=k=>{ const v=overOf(Y,k); return el("td",{class:"num "+(v<-0.5?"neg":"pos")+(k?"":" yr"),id:"ov-"+k},Math.abs(v)<0.5?"":eur0.format(v)); };
+  const foot=el("tfoot",{},el("tr",{class:"over"},el("th",{class:"cat"},"Over"),el("td",{class:"all"}),...MONTHS.map((m,j)=>ov(j+1)),ov(0)));
+  main.append(el("div",{class:"bgridwrap"},el("table",{class:"bgrid"},el("thead",{},head),body,foot)));
+  main.append(el("p",{class:"prose"},"Enter en de pijltjes verplaatsen je door de tabel. Je kunt ook een blok getallen uit Excel of Numbers plakken. Over = inkomsten min uitgaven en sparen."));
 }
 
 /* ---------- vermogen ---------- */
