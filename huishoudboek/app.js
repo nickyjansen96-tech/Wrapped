@@ -11,7 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="14";
+const APP_VERSION="15";
 const TABS=["overzicht","vermogen","transacties","regels","importeren","gebruikers"];
 
 /* ---------- toestand ---------- */
@@ -226,7 +226,7 @@ function suggestionHits(sg){ const c=compileOne(sg); let n=0; for(const t of S.t
 async function copyText(text){ try{ await navigator.clipboard.writeText(text); return true; }catch(e){ return false; } }
 function viewClaude(main){
   const unk=S.tx.filter(t=>catOf(t)===UNK).length, prompt=unk?claudePrompt():null, sg=S.ai.sugg;
-  const card=el("div",{class:"card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Laat Claude regels maken"),
+  const card=el("div",{class:"card",id:"claude-card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Laat Claude regels maken"),
     el("div",{class:"prose"},unk?nTx(unk)+(unk===1?" heeft":" hebben")+" nog geen categorie.":"Alle transacties hebben een categorie."))));
   if(prompt||S.ai.open){ const tools=el("div",{class:"tools"});
     if(prompt)tools.append(el("button",{class:"btn pri",onclick:async()=>{ const ok=await copyText(prompt); S.ai.msg=ok?"Gekopieerd. Plak de vraag in een nieuwe chat in de Claude-app en kopieer het antwoord.":"Kopiëren lukte niet; kopieer de vraag hieronder zelf."; S.ai.showPrompt=!ok; S.ai.open=true; render(); }},"1. Vraag kopiëren"));
@@ -306,7 +306,7 @@ function viewStatus(main){
   const stat=(l,v,b)=>el("div",{class:"stat"},el("div",{class:"l"},l),el("div",{class:"v"},eur0.format(v)),el("div",{class:"s"},hasB?"van "+eur0.format(b):" "));
   main.append(el("div",{class:"card hero"},
     el("div",{class:"herotop"},el("div",{},el("div",{class:"l"},"Over in "+per),el("div",{class:"big "+(rest<-0.5?"neg":"pos")},eur0.format(rest))),
-      el("button",{class:"btn"+(hasB?"":" pri"),onclick:()=>{S.editBudget=true;render();window.scrollTo(0,0);}},hasB?"Budget bewerken":"Budget invullen")),
+      el("button",{class:"btn"+(hasB?"":" pri"),id:"budget-btn",onclick:()=>{S.editBudget=true;render();window.scrollTo(0,0);}},hasB?"Budget bewerken":"Budget invullen")),
     el("div",{class:"stats"},stat("Inkomsten",A.inc,B.inc),stat("Uitgaven",A.uit,B.uit),stat("Gespaard",A.sp,B.sp))));
   if(!S.tx.length){ main.append(el("div",{class:"note info"},"Nog geen transacties ingelezen.",el("button",{class:"btn sm",onclick:()=>{S.tab="importeren";go();}},"Importeren"))); return; }
   if(x.unkN[x.m])main.append(el("div",{class:"note"},nTx(x.unkN[x.m])+" zonder categorie (wel meegeteld in Over)",el("button",{class:"btn sm",onclick:()=>{S.tab="transacties";S.fUnk=true;S.fCat="";S.shown=50;go();}},"Toewijzen")));
@@ -501,7 +501,7 @@ function viewImport(main){
   main.append(drop);
   if(S.importMsg)main.append(el("div",{class:"note info",role:"status"},S.importMsg, S.tx.length?el("button",{class:"btn sm",onclick:()=>{S.tab="overzicht";go();}},"Naar overzicht"):null));
   const binp=el("input",{type:"file",id:"bfile",accept:".json,application/json",hidden:true,onchange:e=>{if(e.target.files[0])restoreBackup(e.target.files[0]);e.target.value="";}});
-  main.append(el("div",{class:"card"},el("h2",{},"Back-up van "+profileName()),
+  main.append(el("div",{class:"card",id:"backup-card"},el("h2",{},"Back-up van "+profileName()),
     el("p",{class:"prose"},"Je gegevens staan alleen op dit toestel. Maak af en toe een back-up."),
     el("div",{class:"tools"},el("button",{class:"btn",disabled:!S.tx.length&&!S.rules.length,onclick:exportBackup},"Back-up maken"),el("button",{class:"btn",onclick:()=>binp.click()},"Terugzetten"),binp),
     S.backupMsg?el("div",{class:"note info",role:"status"},S.backupMsg):null));
@@ -509,7 +509,7 @@ function viewImport(main){
   if(keys.length){ const lab=k=>MONTHS[+k.slice(5)-1].toLowerCase()+" "+k.slice(0,4);
     main.append(el("details",{class:"group fold"},el("summary",{},"Ingelezen",el("span",{class:"of"},keys.length===1?lab(keys[0]):lab(keys[keys.length-1])+" – "+lab(keys[0]))),
       ...keys.map(k=>el("div",{class:"frow"},el("span",{},MONTHS_LONG[+k.slice(5)-1]+" "+k.slice(0,4)),el("span",{class:"num muted"},S.months[k].length))))); }
-  main.append(el("p",{class:"prose foot"},"Versie "+APP_VERSION));
+  main.append(el("p",{class:"prose foot"},"Versie "+APP_VERSION+" · ",el("button",{class:"linkbtn small",onclick:startTour},"Rondleiding bekijken")));
 }
 /* ---------- gebruikers ---------- */
 function viewUsers(main){
@@ -533,6 +533,59 @@ function viewUsers(main){
   main.append(sec);
 }
 
+/* ---------- rondleiding ---------- */
+// Een rondleiding met tooltips voor wie de app voor het eerst opent. Elke stap kan een tabblad openen en wijst een
+// onderdeel aan; ontbreekt dat onderdeel, dan staat de uitleg midden in beeld. Bij "?" start hij opnieuw.
+const TOUR_KEY="hhb-rondleiding-gezien";
+const TOUR=[
+  {title:"Welkom bij je Huishoudboek",text:"In een paar stappen laten we zien hoe het werkt. Alles wat je invult blijft op dit toestel; er gaat niets naar een server."},
+  {target:"#profiles",title:"Wie ben jij?",text:"Kies hier je naam. Iedere gebruiker heeft eigen transacties, budgetten en regels. Met + voeg je gebruikers toe of pas je ze aan."},
+  {target:"#tabs",title:"De onderdelen",text:"Met deze tabbladen ga je naar je overzicht en budget, je vermogen, je transacties, je regels en het inlezen van bankbestanden."},
+  {tab:"importeren",target:".drop .btn.pri",title:"1. Lees je bankexport in",text:"Download bij ABN AMRO je mutaties als Excel of TXT en kies dat bestand hier. Je mag overlappende periodes inlezen; dubbele transacties worden overgeslagen."},
+  {tab:"transacties",target:"#tabs [data-tab=transacties]",title:"2. Controleer je transacties",text:"Hier zie je alles wat je hebt ingelezen. Kies per transactie een categorie, of tik op + om er een regel van te maken, zodat het voortaan vanzelf gaat."},
+  {tab:"regels",target:"#claude-card",title:"3. Laat Claude helpen",text:"Veel transacties zonder categorie? Kopieer de vraag, plak hem in de Claude-app en plak het antwoord terug. Jij kiest welke regels erbij komen."},
+  {tab:"overzicht",target:"#budget-btn",title:"4. Vul je budget in",text:"In een tabel met een rij per categorie en een kolom per maand. Bij Elke maand vul je één bedrag in voor het hele jaar."},
+  {tab:"overzicht",target:".hero",title:"5. Zie hoe je ervoor staat",text:"Bovenaan staat wat er over is in de gekozen maand of het jaar. Daaronder per categorie wat je uitgaf ten opzichte van je budget; rood betekent erover."},
+  {tab:"importeren",target:"#backup-card",title:"Maak af en toe een back-up",text:"Je gegevens staan alleen op dit toestel. Met een back-up raak je niets kwijt en kun je overstappen naar een ander toestel."},
+  {target:"#help",title:"Klaar!",text:"Begin met het inlezen van je bankexport. Deze rondleiding kun je altijd opnieuw bekijken met de ?-knop."}
+];
+let tourIdx=-1, tourBack=null, tourEls=null;
+function startTour(){ if(tourIdx>=0)return; tourBack=S.tab; tourIdx=0;
+  const shade=el("div",{class:"tour-shade","aria-hidden":"true"}), spot=el("div",{class:"tour-spot","aria-hidden":"true"});
+  const tip=el("div",{class:"tour-tip",role:"dialog","aria-modal":"true","aria-labelledby":"tour-title","aria-describedby":"tour-text"});
+  document.body.append(shade,spot,tip); tourEls={shade,spot,tip};
+  addEventListener("resize",placeTour); addEventListener("scroll",placeTour,true); document.addEventListener("keydown",tourKey,true);
+  showTourStep(); }
+function endTour(){ if(tourIdx<0)return; tourIdx=-1; for(const e of Object.values(tourEls))e.remove(); tourEls=null;
+  removeEventListener("resize",placeTour); removeEventListener("scroll",placeTour,true); document.removeEventListener("keydown",tourKey,true);
+  try{ localStorage.setItem(TOUR_KEY,"1"); }catch(e){}
+  const back=S.tx.length?tourBack:"importeren"; if(back&&S.tab!==back){ S.tab=back; tourNav(); } $("#help")?.focus(); }
+// Wisselt van tabblad zonder extra stappen in de terug-geschiedenis.
+function tourNav(){ try{ history.replaceState({...(history.state||viewState(0)),tab:S.tab},"","#"+S.tab); }catch(e){} render(); }
+function tourKey(e){ if(e.key==="Escape"){ e.preventDefault(); endTour(); } else if(e.key==="ArrowRight"){ e.preventDefault(); tourStep(1); } else if(e.key==="ArrowLeft"){ e.preventDefault(); tourStep(-1); }
+  else if(e.key==="Tab"){ const f=[...tourEls.tip.querySelectorAll("button")]; const i=f.indexOf(document.activeElement); e.preventDefault(); f[(i+(e.shiftKey?-1:1)+f.length)%f.length].focus(); } }
+function tourStep(d){ const n=tourIdx+d; if(n<0)return; if(n>=TOUR.length){ endTour(); return; } tourIdx=n; showTourStep(); }
+function showTourStep(){ const st=TOUR[tourIdx], last=tourIdx===TOUR.length-1;
+  if(st.tab&&S.tab!==st.tab){ S.tab=st.tab; if(st.tab==="overzicht")S.editBudget=false; tourNav(); }
+  const t=st.target&&document.querySelector(st.target); if(t)t.scrollIntoView({block:"center",inline:"nearest"});
+  const {tip}=tourEls;
+  tip.replaceChildren(el("div",{class:"tour-count"},(tourIdx+1)+" van "+TOUR.length),el("h2",{id:"tour-title"},st.title),el("p",{id:"tour-text"},st.text),
+    el("div",{class:"tour-btns"},last?el("span"):el("button",{class:"linkbtn",onclick:endTour},"Overslaan"),
+      el("span",{class:"tour-nav"},tourIdx?el("button",{class:"btn",onclick:()=>tourStep(-1)},"Vorige"):null,
+        el("button",{class:"btn pri",id:"tour-next",onclick:()=>tourStep(1)},last?"Aan de slag":tourIdx?"Volgende":"Rondleiding starten"))));
+  placeTour(); $("#tour-next").focus({preventScroll:true}); }
+function placeTour(){ if(tourIdx<0)return; const st=TOUR[tourIdx], {spot,tip,shade}=tourEls, t=st.target&&document.querySelector(st.target);
+  const vw=innerWidth, vh=innerHeight, pad=6, gap=12, tw=Math.min(360,vw-32);
+  tip.style.width=tw+"px";
+  const r=t&&t.getClientRects().length?t.getBoundingClientRect():null;
+  if(!r){ spot.hidden=true; shade.hidden=false; tip.classList.add("center"); tip.style.left=Math.round((vw-tw)/2)+"px"; tip.style.top=Math.round(Math.max(16,(vh-tip.offsetHeight)/2))+"px"; return; }
+  shade.hidden=true; spot.hidden=false; tip.classList.remove("center");
+  Object.assign(spot.style,{left:(r.left-pad)+"px",top:(r.top-pad)+"px",width:(r.width+pad*2)+"px",height:(r.height+pad*2)+"px"});
+  const th=tip.offsetHeight, below=r.bottom+pad+gap+th<=vh-8, top=below?r.bottom+pad+gap:Math.max(8,r.top-pad-gap-th);
+  const left=Math.min(vw-tw-16,Math.max(16,r.left+r.width/2-tw/2));
+  tip.style.top=Math.round(top)+"px"; tip.style.left=Math.round(left)+"px";
+  tip.dataset.side=below?"below":"above"; tip.style.setProperty("--arrow",Math.round(Math.min(tw-24,Math.max(24,r.left+r.width/2-left)))+"px"); }
+
 /* ---------- navigatie en terug ---------- */
 // Elke paginawissel komt in de browsergeschiedenis, zodat Terug (knop of veeggebaar) naar de vorige pagina gaat,
 // inclusief profiel, gekozen periode, filters en scrollpositie.
@@ -545,7 +598,10 @@ addEventListener("popstate",e=>{ const st=e.state; if(!st||!(TABS.includes(st.ta
   if(st.profile&&st.profile!==profile&&PROFILES.some(p=>p.id===st.profile))setProfileQuiet(st.profile);
   restoreView(st); render(); window.scrollTo(0,st.scroll||0); });
 $("#back").addEventListener("click",()=>history.back());
+$("#help").addEventListener("click",startTour);
 $("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]"); if(b&&b.dataset.tab!==S.tab){S.tab=b.dataset.tab;go();}});
 addEventListener("pagehide",flushSaves); document.addEventListener("visibilitychange",()=>{if(document.hidden)flushSaves();});
 if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
 boot();
+// Eerste keer: rondleiding starten (niet als er al gegevens zijn van vóór deze versie).
+try{ if(!localStorage.getItem(TOUR_KEY)){ if(S.tx.length||S.rules.length)localStorage.setItem(TOUR_KEY,"1"); else setTimeout(startTour,300); } }catch(e){}

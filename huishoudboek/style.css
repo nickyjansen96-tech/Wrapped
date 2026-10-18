@@ -249,3 +249,21 @@ details.fold>summary .of{margin-left:auto}
   .tx select.cat{grid-column:1}
   .tx>.icon{grid-column:2;justify-self:end}
 }
+/* rondleiding */
+.help{font:inherit;font-size:14px;font-weight:700;width:26px;height:26px;flex:none;border-radius:999px;border:0;background:var(--fill);color:var(--accent);cursor:pointer}
+.linkbtn.small{font-size:12px;padding:0}
+.tour-shade{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45)}
+.tour-spot{position:fixed;z-index:50;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45),0 0 0 3px rgba(255,255,255,.9);pointer-events:none;transition:all .25s ease}
+.tour-spot[hidden]+.tour-tip{transition:none}
+body:has(.tour-spot:not([hidden]))::before{content:"";position:fixed;inset:0;z-index:49}
+.tour-tip{position:fixed;z-index:51;background:var(--surface);color:var(--ink);border-radius:16px;padding:16px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:6px;transition:top .25s ease,left .25s ease}
+.tour-tip h2{font-size:18px}
+.tour-tip p{margin:0;color:var(--muted);font-size:14px;line-height:1.45}
+.tour-tip .tour-count{font-size:12px;font-weight:600;color:var(--accent)}
+.tour-btns{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px}
+.tour-nav{display:flex;gap:8px}
+.tour-tip::before{content:"";position:absolute;left:calc(var(--arrow,50%) - 8px);width:16px;height:16px;background:var(--surface);transform:rotate(45deg);border-radius:3px}
+.tour-tip[data-side="below"]::before{top:-6px}
+.tour-tip[data-side="above"]::before{bottom:-6px}
+.tour-tip.center::before{display:none}
+@media (prefers-reduced-motion:reduce){ .tour-spot,.tour-tip{transition:none} }

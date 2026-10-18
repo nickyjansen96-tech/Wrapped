@@ -29,6 +29,14 @@ financiële gegevens: die blijven op je toestel.
 - **Android (Chrome):** open de pagina → menu ⋮ → *App installeren*.
 - **Computer (Chrome/Edge):** het installeer-icoon in de adresbalk.
 
+## Rondleiding
+
+Wie de app voor het eerst opent, krijgt een rondleiding met tooltips langs de
+belangrijkste onderdelen (gebruiker kiezen, inlezen, transacties, Claude,
+budget, overzicht, back-up). Met de **?**-knop naast de titel, of onderaan
+*Importeren*, start je hem opnieuw. Of hij al gezien is, staat in
+`localStorage` onder `hhb-rondleiding-gezien`.
+
 ## Gebruikers
 
 Rechtsboven kies je de gebruiker; met **+** beheer je ze: gebruikers
