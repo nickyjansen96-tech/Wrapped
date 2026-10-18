@@ -11,7 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="18";
+const APP_VERSION="20";
 const TABS=["overzicht","vermogen","transacties","regels","importeren","gebruikers"];
 
 /* ---------- toestand ---------- */
@@ -93,7 +93,7 @@ function loadDoc(id,v){ v=v||{};
   else if(id.startsWith("tx-"))S.months[id.slice(3)]=(v.rows||[]).map(r=>({i:String(r.i),d:+r.d,a:+r.a,t:String(r.t??"")})); }
 function indexTx(){ S.tx=Object.values(S.months).flat().sort((a,b)=>b.d-a.d); }
 function resetData(){ S.months={}; S.rules=[]; S.overrides={}; S.budgets={}; S.wealth={}; S.tx=[];
-  Object.assign(S,{year:null,month:0,fCat:"",fText:"",fUnk:false,shown:50,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""},editBudget:false,showEmpty:false}); }
+  Object.assign(S,{year:null,month:0,fCat:"",fText:"",fUnk:false,shown:50,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""},editBudget:false,showEmpty:false,txOpen:null,txMsg:""}); }
 function loadProfile(){ resetData();
   if(store.ok){ for(const id of store.keys())loadDoc(id,store.get(id)); }
   indexTx(); compileRules(); pickDefaults();
@@ -162,6 +162,53 @@ function catSelect(value,onchange,opts={}){ const s=el("select",{class:"cat"+(op
   for(const g of GROUPS){ const og=el("optgroup",{label:g.name}); for(const c of g.cats)og.append(el("option",{value:c,selected:c===value},c)); s.append(og); }
   if(opts.auto&&!value)s.value=""; return s; }
 
+// Alles wat er uit de bankomschrijving te halen is, voor de transactielijst en het detailpaneel.
+const WD=["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+const titleCase=s=>s.toLowerCase().replace(/(^|[\s\-'(])\p{L}/gu,m=>m.toUpperCase());
+function txInfo(t){ const raw=t.t, s=raw.replace(/\s+/g," ").trim(), [name,desc]=who(raw);
+  const f=re=>{ const m=re.exec(raw); return m?m[1].trim():""; };
+  const iban=f(/\/IBAN\/([^/]+)/)||f(/IBAN:\s*([A-Z]{2}\d{2}[A-Z0-9]+)/);
+  const kenmerk=f(/\/EREF\/([^/]+)/)||f(/Kenmerk:\s*(.+?)(?:\s{2,}|$)/);
+  let time="",place="";
+  const m=/\d{2}\.\d{2}\.\d{2}\/(\d{2})[.:](\d{2})\s*(.*)$/.exec(s); if(m){ time=m[1]+":"+m[2]; place=titleCase(m[3].replace(/,?\s*Land:.*$/i,"").trim()); }
+  let type=txType(raw); if(/Apple Pay/i.test(raw))type+=" (Apple Pay)"; else if(/Google Pay/i.test(raw))type+=" (Google Pay)";
+  const y=Math.floor(t.d/10000), mo=Math.floor(t.d/100)%100, d=t.d%100, wd=new Date(y,mo-1,d).getDay();
+  return {name,desc,iban,kenmerk,time,place,type,full:s,wd,d,mo,y}; }
+function catSource(t){ if(S.overrides[t.i]&&CATSET.has(S.overrides[t.i]))return "zelf gekozen"; const a=autoCat(t); return a===UNK?"nog geen categorie":"via regel “"+t.hit.k+"”"; }
+function ruleForm(t,info){ let rc=catOf(t)===UNK?"":catOf(t);
+  const cnt=el("div",{class:"of",id:"rule-hits"});
+  const kin=el("input",{class:"txt",id:"newrule-k",value:info.name.replace(/\s+\d{1,5}$/,""),"aria-label":"Trefwoord",autocomplete:"off"});
+  const upd=()=>{ const k=kin.value.trim(); if(strip(k).length<2){ cnt.textContent=""; return; } const c=compileOne({k,c:""}); let n=0,u=0; for(const x of S.tx) if(matches(c,x)){ n++; if(catOf(x)===UNK)u++; }
+    cnt.textContent="Raakt "+nTx(n)+(u?", waarvan "+u+" nu zonder categorie":"")+"."; };
+  kin.addEventListener("input",upd); upd();
+  const save=()=>{ const k=kin.value.trim(); if(!k)return; if(!rc){ alert("Kies eerst een categorie."); return; }
+    const before=S.tx.filter(x=>catOf(x)===UNK).length; S.rules.unshift({k,c:rc}); compileRules(); saveRules();
+    S.txMsg="Regel “"+k+"” → "+rc+" opgeslagen; "+nTx(before-S.tx.filter(x=>catOf(x)===UNK).length)+" ingedeeld."; S.ruleFor=null; render(); };
+  kin.addEventListener("keydown",e=>{ if(e.key==="Enter")save(); });
+  return el("div",{class:"mk"},el("div",{class:"mkhead"},"Regel maken"),
+    el("p",{class:"prose"},"Alle transacties waarvan de omschrijving dit woord bevat, krijgen voortaan automatisch deze categorie, ook transacties die je later inleest."),
+    el("div",{class:"mkrow"},el("label",{},"Als de omschrijving bevat",kin),el("label",{},"dan categorie",catSelect(rc,v=>{rc=v;},{auto:UNK}))),
+    cnt,el("div",{class:"mkbtns"},el("button",{class:"btn sm",onclick:()=>{S.ruleFor=null;render();}},"Annuleren"),el("button",{class:"btn sm pri",onclick:save},"Regel opslaan"))); }
+function txDetails(t,info){ const row=(k,v)=>v?[el("dt",{},k),el("dd",{},v)]:[];
+  return el("dl",{class:"txdet"},
+    ...row("Datum",WD[info.wd]+" "+info.d+" "+MONTHS_LONG[info.mo-1]+" "+info.y+(info.time?" om "+info.time:"")),
+    ...row("Soort",info.type.charAt(0).toUpperCase()+info.type.slice(1)), ...row("Plaats",info.place),
+    ...row("Tegenrekening",info.iban), ...row("Omschrijving",info.desc), ...row("Kenmerk",info.kenmerk),
+    ...row("Categorie",catOf(t)===UNK?"Nog geen categorie":catOf(t)+" ("+catSource(t)+")"),
+    el("dt",{},"Bankomschrijving"),el("dd",{class:"raw"},info.full)); }
+function txRow(t){ const info=txInfo(t), auto=autoCat(t), man=S.overrides[t.i]&&CATSET.has(S.overrides[t.i])?S.overrides[t.i]:"", open=S.txOpen===t.i;
+  const sel=catSelect(man,v=>{ if(v)S.overrides[t.i]=v; else delete S.overrides[t.i]; saveOverrides(); render(); },{auto,cls:man?"man":auto===UNK?"unk":""});
+  const sub=[info.type.charAt(0).toUpperCase()+info.type.slice(1),info.place,info.time,info.place?"":info.desc].filter(Boolean).join(" · ");
+  const row=el("div",{class:"tx"+(open?" open":"")},
+    el("button",{class:"txmain","aria-expanded":open,title:"Details tonen",onclick:()=>{S.txOpen=open?null:t.i;render();}},
+      el("span",{class:"date"},el("b",{},String(info.d)),el("span",{},MONTHS[info.mo-1].toLowerCase()),el("span",{class:"wd"},WD[info.wd].slice(0,2))),
+      el("span",{class:"txt"},el("span",{class:"who"},info.name),el("span",{class:"det"},sub)),
+      el("span",{class:"num amt "+(t.a<0?"":"pos")},eur2.format(t.a))),
+    el("div",{class:"txcat"},sel,el("span",{class:"src"},catSource(t))),
+    el("button",{class:"rulebtn","aria-expanded":S.ruleFor===t.i,"aria-label":"Regel maken voor "+info.name,title:"Regel maken: vergelijkbare transacties krijgen voortaan automatisch deze categorie",onclick:()=>{S.ruleFor=S.ruleFor===t.i?null:t.i;render();}},"＋ Regel"));
+  if(open)row.append(txDetails(t,info));
+  if(S.ruleFor===t.i)row.append(ruleForm(t,info));
+  return row; }
 function viewTx(main){
   const m=S.month,q=strip(S.fText);
   const inPeriod=S.tx.filter(t=>Math.floor(t.d/10000)===S.year&&(!m||Math.floor(t.d/100)%100===m));
@@ -170,26 +217,17 @@ function viewTx(main){
   const fsel=el("select",{id:"fcat","aria-label":"Filter op categorie",onchange:e=>{S.fCat=e.target.value;S.shown=50;render();}},el("option",{value:""},"Alle categorieën"),
     GROUPS.map(g=>el("optgroup",{label:g.name},g.cats.map(c=>el("option",{value:c,selected:c===S.fCat},c)))));
   main.append(el("div",{class:"tools field"},
-    el("input",{id:"ftext",class:"grow",type:"search",placeholder:"Zoeken",value:S.fText,oninput:e=>{S.fText=e.target.value;S.shown=50;clearTimeout(viewTx.t);viewTx.t=setTimeout(()=>{render();const i=$("#ftext");i.focus();i.setSelectionRange(i.value.length,i.value.length);},250);}}),
+    el("input",{id:"ftext",class:"grow",type:"search",placeholder:"Zoek op naam, plaats of omschrijving",value:S.fText,oninput:e=>{S.fText=e.target.value;S.shown=50;clearTimeout(viewTx.t);viewTx.t=setTimeout(()=>{render();const i=$("#ftext");i.focus();i.setSelectionRange(i.value.length,i.value.length);},250);}}),
     fsel, (unkCount||S.fUnk)?el("button",{class:"chip toggle",id:"funk","aria-pressed":S.fUnk,onclick:()=>{S.fUnk=!S.fUnk;S.shown=50;render();}},"Zonder categorie ("+unkCount+")"):null));
+  if(S.txMsg){ main.append(el("div",{class:"note info",role:"status"},el("span",{},S.txMsg),el("button",{class:"btn sm",onclick:()=>{S.txMsg="";render();}},"OK"))); }
   const allUnk=S.tx.filter(t=>catOf(t)===UNK).length;
-  if(allUnk)main.append(el("div",{class:"note"},el("span",{},nTx(allUnk)+" zonder categorie. Laat een AI-chat zoals Claude of ChatGPT regels maken, of kies hieronder zelf."),aiButton()));
-  const sum=list.reduce((s,t)=>s+t.a,0);
+  if(allUnk)main.append(el("div",{class:"note"},el("span",{},"In totaal "+nTx(allUnk)+" zonder categorie. Laat een AI-chat zoals Claude of ChatGPT regels maken, of kies hieronder zelf."),aiButton()));
+  const sum=list.reduce((s,t)=>s+t.a,0), uit=list.filter(t=>t.a<0).reduce((s,t)=>s+t.a,0), bij=list.filter(t=>t.a>0).reduce((s,t)=>s+t.a,0);
   if(!list.length){main.append(el("div",{class:"empty"},"Geen transacties voor deze selectie."));return;}
   const sec=el("section",{class:"group"});
-  sec.append(el("div",{class:"ghead"},el("span",{},nTx(list.length)),el("span",{class:"num"},eur2.format(sum))));
-  for(const t of list.slice(0,S.shown)){ const [name,det]=who(t.t); const auto=autoCat(t),man=S.overrides[t.i]||"";
-    const sel=catSelect(man,v=>{ if(v)S.overrides[t.i]=v; else delete S.overrides[t.i]; saveOverrides(); render(); },{auto,cls:man?"man":auto===UNK?"unk":""});
-    const d=String(t.d); const row=el("div",{class:"tx"},
-      el("span",{class:"date"},d.slice(6)+"-"+d.slice(4,6)),
-      el("div",{class:"txt"},el("div",{class:"who"},name),det?el("div",{class:"det"},det):null),
-      el("span",{class:"num amt "+(t.a<0?"":"pos")},eur2.format(t.a)), sel,
-      el("button",{class:"icon","aria-label":"Regel maken voor "+name,title:"Regel maken: voortaan automatisch deze categorie","aria-expanded":S.ruleFor===t.i,onclick:()=>{S.ruleFor=S.ruleFor===t.i?null:t.i;render();}},"+"));
-    if(S.ruleFor===t.i){ const kin=el("input",{class:"txt grow",id:"newrule-k",value:name,"aria-label":"Trefwoord"}); let rc=catOf(t)===UNK?"":catOf(t);
-      row.append(el("div",{class:"mk"},"Altijd",catSelect(rc,v=>{rc=v;},{auto:UNK}),"als de omschrijving bevat:",kin,
-        el("button",{class:"btn sm pri",onclick:()=>{ const k=kin.value.trim(); if(!k||!rc){ if(!rc)alert("Kies eerst een categorie."); return; } S.rules.unshift({k,c:rc}); compileRules(); saveRules(); S.ruleFor=null; render(); }},"Opslaan")));
-    }
-    sec.append(row); }
+  sec.append(el("div",{class:"ghead txhead"},el("span",{},nTx(list.length)),el("span",{class:"num"},el("span",{class:"of"},"bij "+eur0.format(bij)+" · af "+eur0.format(-uit)+" · netto "),eur2.format(sum))),
+    el("p",{class:"prose txtip"},"Tik op een transactie voor alle details. Met ",el("b",{},"＋ Regel")," krijgen vergelijkbare transacties voortaan vanzelf dezelfde categorie."));
+  for(const t of list.slice(0,S.shown))sec.append(txRow(t));
   main.append(sec);
   if(list.length>S.shown)main.append(el("button",{class:"linkbtn",onclick:()=>{S.shown+=200;render();}},"Meer tonen ("+(list.length-S.shown)+")"));
 }
@@ -597,7 +635,7 @@ const TOUR=[
   {target:"#profiles",title:"Wie ben jij?",text:"Kies hier je naam. Iedere gebruiker heeft eigen transacties, budgetten en regels. Met + voeg je gebruikers toe of pas je ze aan."},
   {target:"#tabs",title:"De onderdelen",text:"Met deze tabbladen ga je naar je overzicht en budget, je vermogen, je transacties, je regels en het inlezen van bankbestanden."},
   {tab:"importeren",target:".drop .btn.pri",title:"1. Lees je bankexport in",text:"Download bij ABN AMRO je mutaties als Excel of TXT en kies dat bestand hier. Je mag overlappende periodes inlezen; dubbele transacties worden overgeslagen."},
-  {tab:"transacties",target:"#tabs [data-tab=transacties]",title:"2. Controleer je transacties",text:"Hier zie je alles wat je hebt ingelezen. Kies per transactie een categorie, of tik op + om er een regel van te maken, zodat het voortaan vanzelf gaat."},
+  {tab:"transacties",target:"#tabs [data-tab=transacties]",title:"2. Controleer je transacties",text:"Hier zie je alles wat je hebt ingelezen, met soort betaling, plaats en omschrijving. Tik op een transactie voor alle details. Kies een categorie, of tik op ＋ Regel zodat vergelijkbare transacties voortaan vanzelf goed gaan."},
   {tab:"regels",target:"#ai-card",title:"3. Laat AI je transacties indelen",text:"In het tabblad Regels en AI maakt een AI-chat zoals Claude of ChatGPT regels voor je, in drie stappen: vraag kopiëren, in de chat plakken, antwoord terugplakken. De knop ✨ Laat AI indelen brengt je hier vanaf elk scherm."},
   {tab:"overzicht",target:"#budget-btn",title:"4. Vul je budget in",text:"In een tabel met een rij per categorie en een kolom per maand. Bij Elke maand vul je één bedrag in voor het hele jaar."},
   {tab:"overzicht",target:".hero",title:"5. Zie hoe je ervoor staat",text:"Bovenaan staat wat er over is in de gekozen maand of het jaar. Daaronder per categorie wat je uitgaf ten opzichte van je budget; rood betekent erover."},

@@ -29,6 +29,20 @@ financiële gegevens: die blijven op je toestel.
 - **Android (Chrome):** open de pagina → menu ⋮ → *App installeren*.
 - **Computer (Chrome/Edge):** het installeer-icoon in de adresbalk.
 
+## Transacties
+
+Per transactie: datum met weekdag, naam, soort betaling (betaalpas, incasso,
+overboeking, iDEAL, …) met plaats en tijd of de omschrijving, het bedrag en
+de categorie. Onder de categorie staat waar die vandaan komt (*via regel …*,
+*zelf gekozen* of *nog geen categorie*). Tik op een transactie voor alle
+details: volledige datum en tijd, tegenrekening, omschrijving, kenmerk en de
+originele bankomschrijving.
+
+Met **＋ Regel** maak je van een transactie een regel: de app vult het
+trefwoord voor, telt meteen hoeveel transacties de regel raakt en deelt na
+opslaan alle vergelijkbare transacties in. Zoeken werkt op naam, plaats en
+omschrijving.
+
 ## Overzicht en budget
 
 Kies bovenaan een jaar en *Heel jaar* of een maand.
