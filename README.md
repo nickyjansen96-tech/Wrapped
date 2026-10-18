@@ -8,6 +8,9 @@ uit de [Finnhub](https://finnhub.io) API.
 > Ook in deze repo: het **Huishoudboek** als installeerbare app, zie
 > [`huishoudboek/README.md`](huishoudboek/README.md) — met `npm start` te openen op
 > http://localhost:3000/huishoudboek/.
+>
+> En **Huizenjacht** (zoektocht naar een koophuis: wensen, checklist, huizen,
+> hypotheek), een React/Vite-app in [`huizenjacht/`](huizenjacht/README.md).
 
 ## Features
 
