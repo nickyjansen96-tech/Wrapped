@@ -29,6 +29,47 @@ financiële gegevens: die blijven op je toestel.
 - **Android (Chrome):** open de pagina → menu ⋮ → *App installeren*.
 - **Computer (Chrome/Edge):** het installeer-icoon in de adresbalk.
 
+## Overzicht en budget
+
+Kies bovenaan een jaar en *Heel jaar* of een maand.
+
+- **Bekijken:** bovenaan wat er over is (alle transacties, ook die zonder
+  categorie), met inkomsten, uitgaven en gespaard tegenover het budget.
+  Daaronder per categorie wat je uitgaf, het budget en een balk (rood als je
+  erover zit). Lege categorieën zijn verborgen. Tik op een categorie voor de
+  transacties.
+- **Budget bewerken:** een tabel met een rij per categorie en een kolom per
+  maand, plus *Elke maand* (één bedrag voor het hele jaar) en het jaartotaal.
+  Per groep een totaalrij en onderaan *Over* per maand. Enter en de pijltjes
+  verplaatsen je door de tabel; je kunt ook een blok getallen uit Excel of
+  Numbers plakken. Verder: lege rijen vullen met je gemiddelde, budget van
+  vorig jaar overnemen, wissen.
+- Bij *Heel jaar* vergelijkt de app met het budget van de maanden waarover je
+  transacties hebt ingelezen.
+
+## Regels laten maken door een AI-chat
+
+Bovenaan het tabblad *Regels*, bij *Laat AI regels maken*. Werkt met Claude,
+ChatGPT of elke andere AI-chat:
+
+1. **Vraag kopiëren** (of **Delen** naar de app van je keuze). De vraag bevat
+   per tegenpartij zonder categorie: naam (filialen samengenomen), soort
+   betaling, aantal, gemiddeld en totaal bedrag, periode en tot drie
+   voorbeelden van de omschrijving. Rekeningnummers, pasnummers, kenmerken en
+   tijdstippen worden eruit gehaald. Ook je bestaande regels en de
+   categorieën gaan mee.
+2. Plak de vraag in een nieuw gesprek (de knoppen *Claude ↗* en *ChatGPT ↗*
+   openen die direct).
+3. Kopieer het antwoord en tik **Plakken en inlezen** (of plak het zelf en
+   tik *Antwoord inlezen*). De app leest de gevraagde vorm
+   (`trefwoord | categorie`), maar ook JSON, tabellen en lijstjes, en herkent
+   categorieën die net iets anders gespeld zijn.
+4. Controleer de voorstellen: per regel zie je hoeveel transacties hij raakt;
+   bij een onbekende categorie kies je er zelf een.
+5. **Regels toevoegen**: ze komen onderaan, zodat je eigen regels voorrang
+   houden. Bij veel tegenpartijen gaan de 150 meest voorkomende mee; herhaal
+   dan de stappen voor de rest.
+
 ## Rondleiding
 
 Wie de app voor het eerst opent, krijgt een rondleiding met tooltips langs de
