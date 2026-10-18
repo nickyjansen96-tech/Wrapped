@@ -11,7 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="15";
+const APP_VERSION="16";
 const TABS=["overzicht","vermogen","transacties","regels","importeren","gebruikers"];
 
 /* ---------- toestand ---------- */
@@ -143,7 +143,7 @@ function render(){
   if(!S.ready){main.append(el("div",{class:"empty"},"Gegevens laden…"));return;}
   ({overzicht:viewOverview,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport,gebruikers:viewUsers})[S.tab](main);
 }
-function renderProfiles(){ const box=$("#profiles"); box.replaceChildren(...PROFILES.map(p=>el("button",{class:"seg","aria-pressed":p.id===profile,onclick:()=>switchProfile(p.id)},p.name)),
+function renderProfiles(){ const box=$("#profiles"); box.replaceChildren(el("div",{class:"users"},...PROFILES.map(p=>el("button",{class:"seg","aria-pressed":p.id===profile,title:p.name,onclick:()=>switchProfile(p.id)},p.name))),
   el("button",{class:"seg add","aria-pressed":S.tab==="gebruikers","aria-label":"Gebruikers beheren",title:"Gebruikers beheren",onclick:()=>{ if(S.tab!=="gebruikers"){S.tab="gebruikers";go();} }},"+")); }
 // Jaren als knoppen naast elkaar (oudste links), zodat je met één tik wisselt.
 function yearSwitch(ys,pick){ return el("div",{class:"yearseg",role:"group","aria-label":"Jaar"},ys.map(y=>el("button",{class:"seg","aria-pressed":y===S.year,onclick:()=>{ if(y!==S.year)pick(y); }},y))); }
