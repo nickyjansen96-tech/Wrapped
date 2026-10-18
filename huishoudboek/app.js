@@ -11,12 +11,12 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="12";
+const APP_VERSION="14";
 const TABS=["overzicht","vermogen","transacties","regels","importeren","gebruikers"];
 
 /* ---------- toestand ---------- */
 const S={ready:false,tx:[],months:{},rules:[],overrides:{},budgets:{},wealth:{},
-  tab:"overzicht",year:null,month:0,fCat:"",fText:"",fUnk:false,shown:50,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""}};
+  tab:"overzicht",year:null,month:0,fCat:"",fText:"",fUnk:false,shown:50,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""}};
 const $=s=>document.querySelector(s);
 const el=(tag,attrs={},...kids)=>{const e=document.createElement(tag);
   for(const[k,v]of Object.entries(attrs)){ if(k==="class")e.className=v; else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);
@@ -25,6 +25,8 @@ const el=(tag,attrs={},...kids)=>{const e=document.createElement(tag);
 const eur0=new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR",maximumFractionDigits:0});
 const eur2=new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR"});
 const f0=n=>Math.abs(n)<0.5?"–":eur0.format(n);
+const nTx=n=>n+(n===1?" transactie":" transacties");
+const CATSET=new Set(ALLCATS);
 
 /* ---------- categoriseren ---------- */
 const strip=s=>String(s).replace(/\s+/g,"").toLowerCase();
@@ -32,11 +34,11 @@ let compiled=[];
 function compileOne(r){ const k=strip(r.k);
   return k.includes("*")?{re:new RegExp(k.split("*").map(p=>p.replace(/[.+?^${}()|[\]\\]/g,"\\$&")).join(".*")),c:r.c,r}:{k,c:r.c,r}; }
 const matches=(c,t)=>{ const s=t.s||(t.s=strip(t.t)); return c.re?c.re.test(s):s.includes(c.k); };
-function compileRules(){ compiled=S.rules.filter(r=>r.k&&r.k.trim()).map(compileOne);
+function compileRules(){ compiled=S.rules.filter(r=>r.k&&r.k.trim()&&CATSET.has(r.c)).map(compileOne);
   for(const t of S.tx)t.auto=undefined; }
 function autoCat(t){ if(t.auto!==undefined)return t.auto; const s=t.s||(t.s=strip(t.t)); t.hit=null;
   for(const c of compiled){ if(c.re?c.re.test(s):s.includes(c.k)){t.hit=c.r;return t.auto=c.c;} } return t.auto=UNK; }
-const catOf=t=>S.overrides[t.i]||autoCat(t);
+const catOf=t=>{ const o=S.overrides[t.i]; return o&&CATSET.has(o)?o:autoCat(t); };
 function who(d){ let m=/\/NAME\/([^/]*)/.exec(d)||/Naam: (.*?)(\s{2,}|Omschrijving|$)/.exec(d);
   if(m){ const o=/(?:Omschrijving: |\/REMI\/)(.*?)(?:\s{2,}|\/|Kenmerk:|$)/.exec(d); return [m[1].trim(),o?o[1].trim():""]; }
   if(/^(BEA|GEA|eCom)/.test(d)){ const rest=d.slice(33); const i=rest.indexOf(",PAS"); return [(i>0?rest.slice(0,i):rest.slice(0,30)).trim(),""]; }
@@ -91,7 +93,7 @@ function loadDoc(id,v){ v=v||{};
   else if(id.startsWith("tx-"))S.months[id.slice(3)]=(v.rows||[]).map(r=>({i:String(r.i),d:+r.d,a:+r.a,t:String(r.t??"")})); }
 function indexTx(){ S.tx=Object.values(S.months).flat().sort((a,b)=>b.d-a.d); }
 function resetData(){ S.months={}; S.rules=[]; S.overrides={}; S.budgets={}; S.wealth={}; S.tx=[];
-  Object.assign(S,{year:null,month:0,fCat:"",fText:"",fUnk:false,shown:50,onlyMonth:false,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""},editBudget:false,showEmpty:false,bOpen:null}); }
+  Object.assign(S,{year:null,month:0,fCat:"",fText:"",fUnk:false,shown:50,ruleFor:null,rFilter:"",importMsg:"",backupMsg:"",ai:{text:"",sugg:null,msg:""},editBudget:false,showEmpty:false}); }
 function loadProfile(){ resetData();
   if(store.ok){ for(const id of store.keys())loadDoc(id,store.get(id)); }
   indexTx(); compileRules(); pickDefaults();
@@ -128,8 +130,6 @@ function totals(year){ const T={}; let unkN=Array(13).fill(0),unkSum=Array(13).f
 function budgetOf(year,cat,m){ const b=(S.budgets[year]||{})[cat]; if(!b)return 0;
   if(m===0){let s=0;for(let i=1;i<=12;i++)s+=budgetOf(year,cat,i);return s;}
   const o=b.m&&b.m[m]; return o!=null?o:(b.base||0); }
-function setBudget(year,cat,m,val,onlyMonth){ const y=S.budgets[year]||(S.budgets[year]={}); const b=y[cat]||(y[cat]={base:0,m:{}}); if(!b.m)b.m={};
-  if(onlyMonth)b.m[m]=val; else{ b.base=val; delete b.m[m]; } saveBudgets(); }
 const actual=(g,v)=>g.kind==="in"?v:-v;
 
 /* ---------- weergave ---------- */
@@ -156,14 +156,6 @@ function renderRail(){ const rail=$("#rail"); rail.replaceChildren();
   rail.append(el("button",{class:"chip","aria-pressed":S.month===0,onclick:()=>{S.month=0;S.shown=50;render();}},"Heel jaar"));
   MONTHS.forEach((n,i)=>rail.append(el("button",{class:"chip"+(cnt[i+1]?"":" off"),"aria-pressed":S.month===i+1,onclick:()=>{S.month=i+1;S.shown=50;render();}},n)));
 }
-function periodLabel(){ return S.month?MONTHS_LONG[S.month-1]+" "+S.year:"heel "+S.year; }
-
-/* overzicht staat verderop, bij de budgetfuncties */
-function diffCell(grp,a,b){ const d=grp.kind==="uit"?b-a:a-b; if(!b&&Math.abs(a)<0.5)return el("span",{class:"num"},"–");
-  return el("span",{class:"num "+(d<-0.5?"neg":d>0.5?"pos":"")},(d>0.5?"+":"")+eur0.format(d)); }
-function meter(grp,a,b){ if(!b)return el("div",{class:"meter none",role:"img","aria-label":"Geen budget"},el("i",{style:"width:"+(a>0.5?100:0)+"%"}));
-  const p=Math.max(0,a/b), over=grp.kind==="uit"?p>1.005:false;
-  return el("div",{class:"meter"+(over?" over":""),role:"img","aria-label":Math.round(p*100)+"% van budget"},el("i",{style:"width:"+Math.min(100,p*100)+"%"})); }
 
 function catSelect(value,onchange,opts={}){ const s=el("select",{class:"cat"+(opts.cls?" "+opts.cls:""),"aria-label":"Categorie",onchange:e=>onchange(e.target.value)});
   if(opts.auto)s.append(el("option",{value:"",title:"Automatisch via een regel"},opts.auto===UNK?"Kies categorie":opts.auto));
@@ -183,7 +175,7 @@ function viewTx(main){
   const sum=list.reduce((s,t)=>s+t.a,0);
   if(!list.length){main.append(el("div",{class:"empty"},"Geen transacties voor deze selectie."));return;}
   const sec=el("section",{class:"group"});
-  sec.append(el("div",{class:"ghead"},el("span",{},list.length+" transacties"),el("span",{class:"num"},eur2.format(sum))));
+  sec.append(el("div",{class:"ghead"},el("span",{},nTx(list.length)),el("span",{class:"num"},eur2.format(sum))));
   for(const t of list.slice(0,S.shown)){ const [name,det]=who(t.t); const auto=autoCat(t),man=S.overrides[t.i]||"";
     const sel=catSelect(man,v=>{ if(v)S.overrides[t.i]=v; else delete S.overrides[t.i]; saveOverrides(); render(); },{auto,cls:man?"man":auto===UNK?"unk":""});
     const d=String(t.d); const row=el("div",{class:"tx"},
@@ -235,7 +227,7 @@ async function copyText(text){ try{ await navigator.clipboard.writeText(text); r
 function viewClaude(main){
   const unk=S.tx.filter(t=>catOf(t)===UNK).length, prompt=unk?claudePrompt():null, sg=S.ai.sugg;
   const card=el("div",{class:"card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Laat Claude regels maken"),
-    el("div",{class:"prose"},unk?unk+" transacties hebben nog geen categorie.":"Alle transacties hebben een categorie."))));
+    el("div",{class:"prose"},unk?nTx(unk)+(unk===1?" heeft":" hebben")+" nog geen categorie.":"Alle transacties hebben een categorie."))));
   if(prompt||S.ai.open){ const tools=el("div",{class:"tools"});
     if(prompt)tools.append(el("button",{class:"btn pri",onclick:async()=>{ const ok=await copyText(prompt); S.ai.msg=ok?"Gekopieerd. Plak de vraag in een nieuwe chat in de Claude-app en kopieer het antwoord.":"Kopiëren lukte niet; kopieer de vraag hieronder zelf."; S.ai.showPrompt=!ok; S.ai.open=true; render(); }},"1. Vraag kopiëren"));
     tools.append(el("button",{class:"btn"+(S.ai.open?" on":""),onclick:()=>{S.ai.open=!S.ai.open;render();}},"2. Antwoord plakken"));
@@ -251,13 +243,13 @@ function viewClaude(main){
     for(const x of sg){ sec.append(el("div",{class:"rule"},
       el("label",{class:"pick"},el("input",{type:"checkbox",checked:x.ok,"aria-label":"Regel gebruiken",onchange:e=>{x.ok=e.target.checked;render();}}),
         el("input",{class:"txt",value:x.k,"aria-label":"Trefwoord",onchange:e=>{x.k=e.target.value;x.hits=suggestionHits(x);render();}})),
-      catSelect(x.c,v=>{x.c=v;x.badCat=false;}),
+      catSelect(x.c,v=>{ x.c=v; if(x.badCat){ x.badCat=false; x.ok=!x.known; } render(); }),
       el("span",{class:"num muted",title:x.known?"Bestaat al":x.badCat?"Kies een categorie":"Aantal transacties zonder categorie dat deze regel raakt"},x.known?"bestaat":x.badCat?"?":x.hits+"×"))); }
     const n=sg.filter(x=>x.ok&&x.k.trim()).length;
     card.append(sec,el("div",{class:"tools"},el("button",{class:"btn pri",disabled:!n,onclick:()=>{
       const add=sg.filter(x=>x.ok&&x.k.trim()).map(x=>({k:x.k.trim(),c:x.c})); const before=S.tx.filter(t=>catOf(t)===UNK).length;
       S.rules.push(...add); compileRules(); saveRules(); const after=S.tx.filter(t=>catOf(t)===UNK).length;
-      S.ai={text:"",sugg:null,msg:add.length+(add.length===1?" regel":" regels")+" toegevoegd; "+(before-after)+" transacties ingedeeld"+(after?", "+after+" nog niet.":".")}; render(); }},
+      S.ai={text:"",sugg:null,msg:add.length+(add.length===1?" regel":" regels")+" toegevoegd; "+nTx(before-after)+" ingedeeld"+(after?", "+after+" nog niet.":".")}; render(); }},
       n+(n===1?" regel":" regels")+" toevoegen"),el("button",{class:"btn",onclick:()=>{S.ai={text:"",sugg:null,msg:"",open:true};render();}},"Annuleren")));
   }
   main.append(card); }
@@ -271,7 +263,7 @@ function viewRules(main){
   main.append(el("div",{class:"addrule"},nk,catSelect(nc,v=>{nc=v;},{auto:UNK}),el("button",{class:"btn pri",onclick:add},"Toevoegen")));
   if(S.rules.length>15||S.rFilter)main.append(el("div",{class:"tools field"},el("input",{id:"rfilter",class:"grow",type:"search",placeholder:"Zoek in "+S.rules.length+" regels",value:S.rFilter,oninput:e=>{S.rFilter=e.target.value;clearTimeout(viewRules.t);viewRules.t=setTimeout(()=>{render();const i=$("#rfilter");i.focus();i.setSelectionRange(i.value.length,i.value.length);},250);}})));
   const q=S.rFilter.toLowerCase(); const sec=el("section",{class:"group"});
-  if(S.rules.length)sec.append(el("div",{class:"ghead"},el("span",{},S.rules.length+" regels"),el("span",{class:"of"},"bovenste regel gaat voor")));
+  if(S.rules.length)sec.append(el("div",{class:"ghead"},el("span",{},S.rules.length+(S.rules.length===1?" regel":" regels")),el("span",{class:"of"},"bovenste regel gaat voor")));
   S.rules.forEach((r,idx)=>{ if(q&&!(r.k.toLowerCase().includes(q)||r.c.toLowerCase().includes(q)))return;
     sec.append(el("div",{class:"rule"},
       el("input",{class:"txt",value:r.k,"aria-label":"Trefwoord",onchange:e=>{r.k=e.target.value;compileRules();saveRules();render();}}),
@@ -293,12 +285,8 @@ function budgetRef(year){ const has=y=>S.tx.some(t=>Math.floor(t.d/10000)===y); 
   if(ry==null)return {year:null,avg:()=>0}; const {T,span}=totals(ry);
   return {year:ry,avg:(grp,c)=>actual(grp,(T[c]||[])[0]||0)/span}; }
 const roundBudget=v=>v>=50?Math.round(v/5)*5:Math.round(v);
-function setYearBudget(year,cat,{month,yearTotal}){ const y=S.budgets[year]||(S.budgets[year]={}); const b=y[cat]||(y[cat]={base:0,m:{}});
-  if(yearTotal!=null){ b.base=yearTotal/12; b.m={}; } else b.base=month;
-  if(!b.base&&!Object.keys(b.m||{}).length)delete y[cat]; saveBudgets(); }
 function setMonthBudget(year,cat,m,val){ const y=S.budgets[year]||(S.budgets[year]={}); const b=y[cat]||(y[cat]={base:0,m:{}}); if(!b.m)b.m={};
-  if(Math.abs(val-(b.base||0))<0.005)delete b.m[m]; else b.m[m]=val; saveBudgets(); }
-function nextOnEnter(e){ if(e.key!=="Enter")return; e.preventDefault(); const col=e.target.dataset.col; const all=[...document.querySelectorAll('#main input.bin[data-col="'+col+'"]')]; const i=all.indexOf(e.target); (all[i+1]||e.target).focus(); }
+  if(Math.abs(val-(b.base||0))<0.005)delete b.m[m]; else b.m[m]=val; if(!b.base&&!Object.keys(b.m).length)delete y[cat]; saveBudgets(); }
 /* ---------- overzicht en budget ---------- */
 // Twee standen: "bekijken" (hoe sta ik ervoor) en "budget bewerken" (bedragen invullen). Zo staat er nooit alles tegelijk op het scherm.
 function ovCtx(){ const Y=S.year,m=S.month,{T,unkN,unkSum,cnt}=totals(Y); let upto=0,from=0; for(let k=12;k>=1;k--) if(cnt[k]){upto=k;break;} for(let k=1;k<=12;k++) if(cnt[k]){from=k;break;}
@@ -306,7 +294,6 @@ function ovCtx(){ const Y=S.year,m=S.month,{T,unkN,unkSum,cnt}=totals(Y); let up
 // Budget om mee te vergelijken: de gekozen maand, of bij heel jaar alleen de maanden waarover transacties zijn ingelezen.
 function cmpBudget(x,c){ if(x.m)return budgetOf(x.Y,c,x.m); if(!x.upto)return budgetOf(x.Y,c,0); let s=0; for(let k=x.from;k<=x.upto;k++)s+=budgetOf(x.Y,c,k); return s; }
 const actOf=(x,grp,c)=>actual(grp,(x.T[c]||[])[x.m]||0);
-const hasOwnMonths=(Y,c)=>{ const b=(S.budgets[Y]||{})[c]; return !!(b&&b.m&&Object.keys(b.m).length); };
 const groupSum=(grp,fn)=>grp.cats.reduce((s,c)=>s+fn(c),0);
 const kinds=fn=>({inc:groupSum(GROUPS[0],fn),uit:groupSum(GROUPS[1],fn)+groupSum(GROUPS[2],fn)+groupSum(GROUPS[3],fn),sp:groupSum(GROUPS[4],fn)});
 const anyBudget=Y=>ALLCATS.some(c=>budgetOf(Y,c,0)>0);
@@ -314,7 +301,7 @@ function viewOverview(main){ if(S.editBudget)viewBudgetEdit(main); else viewStat
 
 function viewStatus(main){
   const x=ovCtx(), hasB=anyBudget(x.Y);
-  const A=kinds(c=>{ const g=GROUPS.find(g=>g.cats.includes(c)); return actOf(x,g,c); }), B=kinds(c=>cmpBudget(x,c)), rest=A.inc-A.uit-A.sp;
+  const A=kinds(c=>{ const g=GROUPS.find(g=>g.cats.includes(c)); return actOf(x,g,c); }), B=kinds(c=>cmpBudget(x,c)), rest=A.inc-A.uit-A.sp+x.unkSum[x.m];
   const per=S.month?MONTHS_LONG[S.month-1]+" "+S.year:String(S.year);
   const stat=(l,v,b)=>el("div",{class:"stat"},el("div",{class:"l"},l),el("div",{class:"v"},eur0.format(v)),el("div",{class:"s"},hasB?"van "+eur0.format(b):" "));
   main.append(el("div",{class:"card hero"},
@@ -322,7 +309,7 @@ function viewStatus(main){
       el("button",{class:"btn"+(hasB?"":" pri"),onclick:()=>{S.editBudget=true;render();window.scrollTo(0,0);}},hasB?"Budget bewerken":"Budget invullen")),
     el("div",{class:"stats"},stat("Inkomsten",A.inc,B.inc),stat("Uitgaven",A.uit,B.uit),stat("Gespaard",A.sp,B.sp))));
   if(!S.tx.length){ main.append(el("div",{class:"note info"},"Nog geen transacties ingelezen.",el("button",{class:"btn sm",onclick:()=>{S.tab="importeren";go();}},"Importeren"))); return; }
-  if(x.unkN[x.m])main.append(el("div",{class:"note"},x.unkN[x.m]+" transacties zonder categorie",el("button",{class:"btn sm",onclick:()=>{S.tab="transacties";S.fUnk=true;S.fCat="";S.shown=50;go();}},"Toewijzen")));
+  if(x.unkN[x.m])main.append(el("div",{class:"note"},nTx(x.unkN[x.m])+" zonder categorie (wel meegeteld in Over)",el("button",{class:"btn sm",onclick:()=>{S.tab="transacties";S.fUnk=true;S.fCat="";S.shown=50;go();}},"Toewijzen")));
   let hidden=0;
   GROUPS.forEach(grp=>{ const rows=[]; let ga=0,gb=0;
     for(const c of grp.cats){ const a=actOf(x,grp,c), b=cmpBudget(x,c); ga+=a; gb+=b;
@@ -335,7 +322,7 @@ function catLine(grp,c,a,b){ const over=grp.kind==="uit"&&b>0&&a>b+0.5, p=b>0?Ma
   return el("button",{class:"cline",onclick:()=>{S.tab="transacties";S.fCat=c;S.fUnk=false;S.shown=50;go();}},
     el("span",{class:"cn"},c),
     el("span",{class:"cv"},el("span",{class:"num"+(over?" neg":"")},f0(a)),el("span",{class:"of"},b>0?"van "+eur0.format(b):"geen budget")),
-    b>0?el("span",{class:"bar"+(over?" over":"")},el("i",{style:"width:"+(p*100)+"%"})):null); }
+    b>0?el("span",{class:"pbar"+(over?" over":""),role:"img","aria-label":Math.round(a/b*100)+"% van budget"},el("i",{style:"width:"+(p*100)+"%"})):null); }
 
 /* budget bewerken: een tabel met een rij per categorie en een kolom per maand */
 // Kolom 0 is "Elke maand": daar vul je één bedrag in voor alle maanden. Kolommen 1–12 zijn de maanden zelf.
@@ -446,29 +433,35 @@ function viewWealth(main){
 function h32(str,seed){ let h=seed>>>0; for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;} return h.toString(16).padStart(8,"0"); }
 const cents=x=>Math.floor(x*100+0.5);
 function txId(d,a,begin,text){ const s=d+"|"+cents(a)+"|"+cents(begin)+"|"+text.replace(/\s+/g," ").trim(); return h32(s,2166136261)+h32(s,340282366); }
-const toNum=v=>typeof v==="number"?v:parseFloat(String(v).replace(/\./g,"").replace(",","."));
+// Bedrag uit een bestand: "1.234,56" (ABN AMRO), maar ook "1234.56" uit een CSV.
+function toNum(v){ if(typeof v==="number")return v; let s=String(v??"").replace(/[\s€]/g,"");
+  if(s.includes(","))s=s.replace(/\./g,"").replace(",","."); else if(/\.\d{3}(\.|$)/.test(s)&&!/\.\d{1,2}$/.test(s))s=s.replace(/\./g,"");
+  return s===""?NaN:Number(s); }
 function toDate(v){ if(v instanceof Date)return v.getFullYear()*10000+(v.getMonth()+1)*100+v.getDate(); const n=parseInt(String(v).replace(/\D/g,""),10); return n>19000000&&n<21000000?n:NaN; }
 function parseRows(rows){ const out=[]; if(!rows.length)return out; let ci={d:2,b:3,a:6,t:7},start=0;
   const head=rows[0].map(x=>String(x).trim().toLowerCase());
   if(head.includes("transactiedatum")){ ci={d:head.indexOf("transactiedatum"),b:head.indexOf("beginsaldo"),a:head.indexOf("transactiebedrag"),t:head.indexOf("omschrijving")}; start=1; }
+  else if(head.includes("transactiondate")){ ci={d:head.indexOf("transactiondate"),b:head.indexOf("startsaldo"),a:head.indexOf("amount"),t:head.indexOf("description")}; start=1; }
   else if(rows[0].length>=8&&isNaN(toDate(rows[0][3])))ci={d:2,b:3,a:6,t:7}; else ci={d:2,b:4,a:6,t:7};
   if(ci.d<0||ci.a<0||ci.t<0)return null;
   for(let r=start;r<rows.length;r++){ const R=rows[r]; if(!R||R.length<4)continue; const d=toDate(R[ci.d]),a=toNum(R[ci.a]),b=ci.b>=0?toNum(R[ci.b]):0,t=String(R[ci.t]??"");
     if(isNaN(d)||isNaN(a))continue; out.push({i:txId(d,a,isNaN(b)?0:b,t),d,a,t}); }
   return out; }
+// TXT-exports zijn niet altijd UTF-8; dan lezen als Windows-1252 zodat é en ë goed blijven.
+function decodeText(buf){ try{ return new TextDecoder("utf-8",{fatal:true}).decode(buf); }catch(e){ return new TextDecoder("windows-1252").decode(buf); } }
 async function importFile(file){
   if(/\.json$/i.test(file.name))return restoreBackup(file);
   S.importMsg="Bezig met inlezen…"; render();
   try{ const buf=await file.arrayBuffer(); let rows;
-    if(/\.(txt|tab|tsv)$/i.test(file.name))rows=new TextDecoder().decode(buf).split(/\r?\n/).filter(Boolean).map(l=>l.split("\t"));
-    else{ const wb=XLSX.read(buf,{type:"array"}); rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:""}); }
+    if(/\.(txt|tab|tsv)$/i.test(file.name))rows=decodeText(buf).split(/\r?\n/).filter(Boolean).map(l=>l.split("\t"));
+    else{ const wb=XLSX.read(buf,{type:"array",cellDates:true}); rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:""}); }
     const parsed=parseRows(rows);
     if(!parsed||!parsed.length){S.importMsg="In "+file.name+" staan geen transacties in het ABN AMRO-formaat. Download je mutaties als Excel (XLS) of TXT en probeer het opnieuw.";render();return;}
     const have=new Set(S.tx.map(t=>t.i)); let added=0,dup=0; const touched=new Set();
     for(const t of parsed){ if(have.has(t.i)){dup++;continue;} have.add(t.i); const s=String(t.d),key=s.slice(0,4)+"-"+s.slice(4,6); (S.months[key]||(S.months[key]=[])).push(t); touched.add(key); added++; }
     indexTx(); for(const k of touched)saveMonth(k);
     const y0=S.year; pickDefaults(); if(years().includes(y0)&&!added)S.year=y0;
-    S.importMsg=added+" nieuwe transacties toegevoegd uit "+file.name+(dup?"; "+dup+" stonden er al in en zijn overgeslagen.":".");
+    S.importMsg=(added?nTx(added).replace(/ transactie/," nieuwe transactie")+" toegevoegd":"Geen nieuwe transacties")+" uit "+file.name+(dup?"; "+dup+(dup===1?" stond":" stonden")+" er al in en "+(dup===1?"is":"zijn")+" overgeslagen.":".");
     if(added&&!store.ok)S.importMsg+=" Let op: opslaan is in deze browser niet beschikbaar.";
   }catch(e){ S.importMsg="Het bestand kon niet worden gelezen. Controleer of het een export van de bank is."; }
   render(); }
@@ -478,7 +471,8 @@ function backupData(){ return {app:"huishoudboek",version:1,profile:profileName(
   rules:S.rules.map(r=>({k:r.k,c:r.c})),overrides:S.overrides,budgets:S.budgets,wealth:S.wealth,
   months:Object.fromEntries(Object.entries(S.months).map(([k,rows])=>[k,rows.map(t=>({i:t.i,d:t.d,a:t.a,t:t.t}))]))}; }
 async function exportBackup(){
-  flushSaves(); const name="huishoudboek-"+profile+"-"+new Date().toISOString().slice(0,10)+".json";
+  flushSaves(); const slug=profileName().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"gebruiker";
+  const name="huishoudboek-"+slug+"-"+new Date().toISOString().slice(0,10)+".json";
   const blob=new Blob([JSON.stringify(backupData())],{type:"application/json"});
   try{ const file=new File([blob],name,{type:"application/json"});
     if(navigator.canShare&&navigator.canShare({files:[file]})&&matchMedia("(pointer:coarse)").matches){ await navigator.share({files:[file],title:"Huishoudboek back-up "+profileName()}); S.backupMsg="Back-up gedeeld."; render(); return; }
@@ -489,7 +483,7 @@ async function restoreBackup(file){
   let v; try{ v=JSON.parse(await file.text()); }catch(e){ S.backupMsg="Dit is geen geldige back-up."; render(); return; }
   if(!v||typeof v!=="object"||!v.months||typeof v.months!=="object"){ S.backupMsg="Dit bestand is geen Huishoudboek-back-up."; render(); return; }
   const n=Object.values(v.months).reduce((s,r)=>s+(Array.isArray(r)?r.length:0),0);
-  const from=v.profile&&v.profile!==profileName()?" Let op: deze back-up is gemaakt in het profiel "+v.profile+".":"";
+  const from=v.profile&&v.profile!==profileName()?" Let op: deze back-up is van "+v.profile+".":"";
   if((S.tx.length||from)&&!confirm("De gegevens van "+profileName()+" ("+S.tx.length+" transacties) worden vervangen door de back-up ("+n+" transacties)."+from+" Doorgaan?"))return;
   dropSaves(); for(const id of store.keys())store.del(id);
   resetData();
@@ -526,7 +520,7 @@ function viewUsers(main){
   main.append(el("div",{class:"card"},el("h2",{},"Gebruiker toevoegen"),el("p",{class:"prose"},"Iedere gebruiker heeft eigen transacties, regels, budgetten en vermogen."),
     el("div",{class:"addrule"},nin,el("button",{class:"btn pri",onclick:add},"Toevoegen"))));
   if(S.userMsg)main.append(el("div",{class:"note",role:"status"},S.userMsg));
-  const sec=el("section",{class:"group"},el("div",{class:"ghead"},el("span",{},PROFILES.length+" gebruikers"),el("span",{class:"of"},"op dit toestel")));
+  const sec=el("section",{class:"group"},el("div",{class:"ghead"},el("span",{},PROFILES.length+(PROFILES.length===1?" gebruiker":" gebruikers")),el("span",{class:"of"},"op dit toestel")));
   for(const p of PROFILES){ const cur=p.id===profile, n=userKeys(p.id).filter(k=>k.includes(":tx-")).length;
     const name=el("input",{class:"txt",value:p.name,"aria-label":"Naam van "+p.name,onchange:e=>{ const v=e.target.value.trim();
       if(!v||nameTaken(v,p.id)){ S.userMsg=v?"Er is al een gebruiker met de naam "+v+".":"Een naam mag niet leeg zijn."; render(); return; }
