@@ -11,8 +11,8 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="11";
-const TABS=["overzicht","vermogen","transacties","regels","importeren"];
+const APP_VERSION="12";
+const TABS=["overzicht","vermogen","transacties","regels","importeren","gebruikers"];
 
 /* ---------- toestand ---------- */
 const S={ready:false,tx:[],months:{},rules:[],overrides:{},budgets:{},wealth:{},
@@ -43,8 +43,16 @@ function who(d){ let m=/\/NAME\/([^/]*)/.exec(d)||/Naam: (.*?)(\s{2,}|Omschrijvi
   return [d.replace(/\s+/g," ").slice(0,40),""]; }
 
 /* ---------- profielen ---------- */
-const PROFILES=[{id:"nicky",name:"Nicky"},{id:"heleen",name:"Heleen"}];
-const LAST_PROFILE="hhb-profiel";
+// Gebruikers staan in de lijst hieronder; ieder heeft eigen gegevens onder "hhb:<id>:…". Nicky en Heleen zijn de beginlijst.
+const USERS_KEY="hhb-gebruikers", LAST_PROFILE="hhb-profiel";
+let PROFILES=(()=>{ try{ const v=JSON.parse(localStorage.getItem(USERS_KEY)||"null"); if(Array.isArray(v)&&v.length&&v.every(u=>u&&typeof u.id==="string"&&typeof u.name==="string"))return v; }catch(e){} return [{id:"nicky",name:"Nicky"},{id:"heleen",name:"Heleen"}]; })();
+function saveUsers(){ try{ localStorage.setItem(USERS_KEY,JSON.stringify(PROFILES)); }catch(e){ setSave("Gebruikers niet opgeslagen.",true); } }
+const nameTaken=(name,exceptId)=>PROFILES.some(p=>p.id!==exceptId&&p.name.trim().toLowerCase()===name.trim().toLowerCase());
+function addUser(name){ const id="u"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); PROFILES.push({id,name:name.trim()}); saveUsers(); return id; }
+function userKeys(id){ const P="hhb:"+id+":", out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith(P))out.push(k); } }catch(e){} return out; }
+function deleteUser(id){ if(PROFILES.length<2)return; if(id===profile){ dropSaves(); }
+  for(const k of userKeys(id)){ try{ localStorage.removeItem(k); }catch(e){} }
+  PROFILES=PROFILES.filter(p=>p.id!==id); saveUsers(); if(id===profile)setProfileQuiet(PROFILES[0].id); }
 let profile=(()=>{ try{ const p=localStorage.getItem(LAST_PROFILE); if(PROFILES.some(x=>x.id===p))return p; }catch(e){} return PROFILES[0].id; })();
 const profileName=()=>PROFILES.find(p=>p.id===profile).name;
 
@@ -133,14 +141,15 @@ function render(){
   for(const w of document.querySelectorAll(".wrap"))w.classList.toggle("wide",S.tab==="overzicht"&&!!S.editBudget);
   renderProfiles(); renderRail(); const main=$("#main"); main.replaceChildren();
   if(!S.ready){main.append(el("div",{class:"empty"},"Gegevens laden…"));return;}
-  ({overzicht:viewOverview,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport})[S.tab](main);
+  ({overzicht:viewOverview,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport,gebruikers:viewUsers})[S.tab](main);
 }
-function renderProfiles(){ const box=$("#profiles"); box.replaceChildren(...PROFILES.map(p=>el("button",{class:"seg","aria-pressed":p.id===profile,onclick:()=>switchProfile(p.id)},p.name))); }
+function renderProfiles(){ const box=$("#profiles"); box.replaceChildren(...PROFILES.map(p=>el("button",{class:"seg","aria-pressed":p.id===profile,onclick:()=>switchProfile(p.id)},p.name)),
+  el("button",{class:"seg add","aria-pressed":S.tab==="gebruikers","aria-label":"Gebruikers beheren",title:"Gebruikers beheren",onclick:()=>{ if(S.tab!=="gebruikers"){S.tab="gebruikers";go();} }},"+")); }
 // Jaren als knoppen naast elkaar (oudste links), zodat je met één tik wisselt.
 function yearSwitch(ys,pick){ return el("div",{class:"yearseg",role:"group","aria-label":"Jaar"},ys.map(y=>el("button",{class:"seg","aria-pressed":y===S.year,onclick:()=>{ if(y!==S.year)pick(y); }},y))); }
 function renderRail(){ const rail=$("#rail"); rail.replaceChildren();
   const ov=S.tab==="overzicht";
-  rail.hidden=S.tab==="regels"||S.tab==="importeren"||(!ov&&!S.tx.length); if(rail.hidden)return;
+  rail.hidden=S.tab==="regels"||S.tab==="importeren"||S.tab==="gebruikers"||(!ov&&!S.tx.length); if(rail.hidden)return;
   // Op het overzicht kun je ook jaren zonder transacties kiezen (bijv. volgend jaar), om alvast te begroten.
   const ys=ov?budgetYears():years().slice().reverse(); if(!ys.includes(S.year))S.year=ov?(years()[0]||new Date().getFullYear()):ys[ys.length-1];
   rail.append(yearSwitch(ys,y=>{S.year=y;S.shown=50;render();})); if(ov&&S.editBudget)return; if(S.tab==="vermogen")return; const {cnt}=totals(S.year);
@@ -508,6 +517,28 @@ function viewImport(main){
       ...keys.map(k=>el("div",{class:"frow"},el("span",{},MONTHS_LONG[+k.slice(5)-1]+" "+k.slice(0,4)),el("span",{class:"num muted"},S.months[k].length))))); }
   main.append(el("p",{class:"prose foot"},"Versie "+APP_VERSION));
 }
+/* ---------- gebruikers ---------- */
+function viewUsers(main){
+  const nin=el("input",{class:"txt grow",id:"newuser",placeholder:"Naam",autocomplete:"off","aria-label":"Naam nieuwe gebruiker"});
+  const add=()=>{ const n=nin.value.trim(); if(!n)return; if(nameTaken(n)){ S.userMsg="Er is al een gebruiker met de naam "+n+"."; render(); return; }
+    const id=addUser(n); S.userMsg=""; switchProfile(id); };
+  nin.addEventListener("keydown",e=>{if(e.key==="Enter")add();});
+  main.append(el("div",{class:"card"},el("h2",{},"Gebruiker toevoegen"),el("p",{class:"prose"},"Iedere gebruiker heeft eigen transacties, regels, budgetten en vermogen."),
+    el("div",{class:"addrule"},nin,el("button",{class:"btn pri",onclick:add},"Toevoegen"))));
+  if(S.userMsg)main.append(el("div",{class:"note",role:"status"},S.userMsg));
+  const sec=el("section",{class:"group"},el("div",{class:"ghead"},el("span",{},PROFILES.length+" gebruikers"),el("span",{class:"of"},"op dit toestel")));
+  for(const p of PROFILES){ const cur=p.id===profile, n=userKeys(p.id).filter(k=>k.includes(":tx-")).length;
+    const name=el("input",{class:"txt",value:p.name,"aria-label":"Naam van "+p.name,onchange:e=>{ const v=e.target.value.trim();
+      if(!v||nameTaken(v,p.id)){ S.userMsg=v?"Er is al een gebruiker met de naam "+v+".":"Een naam mag niet leeg zijn."; render(); return; }
+      p.name=v; saveUsers(); S.userMsg=""; if(cur)document.title="Huishoudboek · "+v; render(); }});
+    sec.append(el("div",{class:"urow"},name,el("span",{class:"of"},cur?"actief":n?n+(n===1?" maand":" maanden")+" ingelezen":"nog leeg"),
+      el("span",{class:"acts"},cur?el("span",{class:"icon-sp"}):el("button",{class:"btn sm",onclick:()=>{ S.userMsg=""; S.tab="overzicht"; switchProfile(p.id); }},"Openen"),
+        PROFILES.length>1?el("button",{class:"icon",title:"Verwijderen","aria-label":"Gebruiker "+p.name+" verwijderen",onclick:()=>{
+          if(!confirm("Gebruiker "+p.name+" en al diens gegevens van dit toestel verwijderen? Maak eerst een back-up als je die nog wilt bewaren."))return;
+          deleteUser(p.id); S.userMsg=p.name+" is verwijderd."; render(); }},"×"):null))); }
+  main.append(sec);
+}
+
 /* ---------- navigatie en terug ---------- */
 // Elke paginawissel komt in de browsergeschiedenis, zodat Terug (knop of veeggebaar) naar de vorige pagina gaat,
 // inclusief profiel, gekozen periode, filters en scrollpositie.

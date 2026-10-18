@@ -29,53 +29,20 @@ financiële gegevens: die blijven op je toestel.
 - **Android (Chrome):** open de pagina → menu ⋮ → *App installeren*.
 - **Computer (Chrome/Edge):** het installeer-icoon in de adresbalk.
 
-## Profielen
+## Gebruikers
 
-Er zijn twee profielen, **Nicky** en **Heleen**, te kiezen rechtsboven. Elk
-profiel heeft eigen transacties, regels, budgetten, vermogen en back-ups. De
-app onthoudt welk profiel het laatst open stond. Profielen staan in `PROFILES`
-bovenin `app.js`.
-
-## Overzicht en budget
-
-Kies bovenaan een jaar en *Heel jaar* of een maand.
-
-- **Bekijken:** bovenaan wat er over is, met inkomsten, uitgaven en gespaard
-  (en het budget). Daaronder per categorie wat je uitgaf, het budget en een
-  balk (rood als je erover zit). Lege categorieën zijn verborgen. Tik op een
-  categorie voor de transacties.
-- **Budget bewerken:** een tabel met een rij per categorie en een kolom per
-  maand, plus *Elke maand* (één bedrag voor het hele jaar) en het jaartotaal.
-  Per groep een totaalrij en onderaan *Over* per maand. Enter en de pijltjes
-  verplaatsen je door de tabel; je kunt ook een blok getallen uit Excel of
-  Numbers plakken. Verder: lege rijen vullen met je gemiddelde, budget van
-  vorig jaar overnemen, wissen.
-- Bij *Heel jaar* vergelijkt de app met het budget van de maanden waarover je
-  transacties hebt ingelezen.
-
-## Regels laten maken door Claude
-
-Bovenaan het tabblad *Regels*, bij *Laat Claude regels maken*:
-
-1. **Vraag kopiëren** (of *Delen met Claude-app*): de app zet de tegenpartijen
-   zonder categorie, je bestaande regels en de vaste categorieën in één vraag.
-   Er gaan alleen namen, korte omschrijvingen en bedragen mee, geen
-   rekeningnummers.
-2. Plak die vraag in een chat met Claude (bijv. de Claude-app op je iPad).
-3. Plak het antwoord van Claude terug in de app en tik **Antwoord inlezen**.
-4. Controleer de voorstellen: per regel zie je hoeveel transacties hij raakt;
-   je kunt trefwoord en categorie aanpassen of een regel uitvinken.
-   Onbekende categorieën en bestaande regels staan standaard uit.
-5. **Regels toevoegen**: ze komen onderaan, zodat je eigen regels voorrang houden.
-
-Doe dit na elke nieuwe import om ook nieuwe winkels en partijen te laten indelen.
+Rechtsboven kies je de gebruiker; met **+** beheer je ze: gebruikers
+toevoegen, hernoemen en verwijderen (met al hun gegevens). Iedere gebruiker
+heeft eigen transacties, regels, budgetten, vermogen en back-ups. De lijst
+begint met Nicky en Heleen en staat in `localStorage` onder `hhb-gebruikers`;
+de app onthoudt welke gebruiker het laatst open stond.
 
 ## Gegevens
 
-- Opslag: `localStorage` onder `hhb:<profiel>:*` (dezelfde indeling als het
+- Opslag: `localStorage` onder `hhb:<gebruiker-id>:*` (dezelfde indeling als het
   artifact: `rules`, `overrides`, `budgets`, `wealth`, `tx-JJJJ-MM`). Gegevens
   van vóór de profielen worden automatisch naar Nicky verplaatst.
-- Profielen staan per toestel: wat op de ene telefoon staat, staat niet
+- Gebruikers staan per toestel: wat op de ene telefoon staat, staat niet
   vanzelf op de andere. Overzetten kan met een back-up.
 - Onder *Importeren* maak je per profiel een JSON-back-up en zet je die terug,
   bijvoorbeeld om naar een ander toestel over te stappen.
