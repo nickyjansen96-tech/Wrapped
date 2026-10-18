@@ -290,3 +290,5 @@ body:has(.tour-spot:not([hidden]))::before{content:"";position:fixed;inset:0;z-i
   select.cat,input.txt,.field input,.field select{min-height:36px}
 }
 .linkbtn.small{padding:6px 0}
+a.btn{text-decoration:none;display:inline-flex;align-items:center}
+#ai-card{gap:10px}
