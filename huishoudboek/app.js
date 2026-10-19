@@ -11,8 +11,8 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="20";
-const TABS=["overzicht","vermogen","transacties","regels","importeren","gebruikers"];
+const APP_VERSION="21";
+const TABS=["overzicht","vergelijk","vermogen","transacties","regels","importeren","gebruikers"];
 
 /* ---------- toestand ---------- */
 const S={ready:false,tx:[],months:{},rules:[],overrides:{},budgets:{},wealth:{},
@@ -134,25 +134,25 @@ const actual=(g,v)=>g.kind==="in"?v:-v;
 
 /* ---------- weergave ---------- */
 function render(){
-  for(const b of document.querySelectorAll("#tabs button"))b.setAttribute("aria-selected",b.dataset.tab===S.tab);
+  for(const b of document.querySelectorAll("#tabs button"))b.setAttribute("aria-selected",b.dataset.tab===(S.tab==="vergelijk"?"overzicht":S.tab));
   const cur=document.querySelector('#tabs button[aria-selected="true"]'); if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:"nearest",inline:"nearest"});
   $("#back").hidden=!(history.state&&history.state.n>0);
   // De budgettabel krijgt de volle schermbreedte, zodat alle maanden ernaast passen.
-  for(const w of document.querySelectorAll(".wrap"))w.classList.toggle("wide",S.tab==="overzicht"&&!!S.editBudget);
+  for(const w of document.querySelectorAll(".wrap"))w.classList.toggle("wide",(S.tab==="overzicht"&&!!S.editBudget)||S.tab==="vergelijk");
   renderProfiles(); renderRail(); const main=$("#main"); main.replaceChildren();
   if(!S.ready){main.append(el("div",{class:"empty"},"Gegevens laden…"));return;}
-  ({overzicht:viewOverview,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport,gebruikers:viewUsers})[S.tab](main);
+  ({overzicht:viewOverview,vermogen:viewWealth,transacties:viewTx,regels:viewRules,importeren:viewImport,gebruikers:viewUsers,vergelijk:viewCompare})[S.tab](main);
 }
 function renderProfiles(){ const box=$("#profiles"); box.replaceChildren(el("div",{class:"users"},...PROFILES.map(p=>el("button",{class:"seg","aria-pressed":p.id===profile,title:p.name,onclick:()=>switchProfile(p.id)},p.name))),
   el("button",{class:"seg add","aria-pressed":S.tab==="gebruikers","aria-label":"Gebruikers beheren",title:"Gebruikers beheren",onclick:()=>{ if(S.tab!=="gebruikers"){S.tab="gebruikers";go();} }},"+")); }
 // Jaren als knoppen naast elkaar (oudste links), zodat je met één tik wisselt.
 function yearSwitch(ys,pick){ return el("div",{class:"yearseg",role:"group","aria-label":"Jaar"},ys.map(y=>el("button",{class:"seg","aria-pressed":y===S.year,onclick:()=>{ if(y!==S.year)pick(y); }},y))); }
 function renderRail(){ const rail=$("#rail"); rail.replaceChildren();
-  const ov=S.tab==="overzicht";
+  const ov=S.tab==="overzicht"||S.tab==="vergelijk";
   rail.hidden=S.tab==="regels"||S.tab==="importeren"||S.tab==="gebruikers"||(!ov&&!S.tx.length); if(rail.hidden)return;
   // Op het overzicht kun je ook jaren zonder transacties kiezen (bijv. volgend jaar), om alvast te begroten.
   const ys=ov?budgetYears():years().slice().reverse(); if(!ys.includes(S.year))S.year=ov?(years()[0]||new Date().getFullYear()):ys[ys.length-1];
-  rail.append(yearSwitch(ys,y=>{S.year=y;S.shown=50;render();})); if(ov&&S.editBudget)return; if(S.tab==="vermogen")return; const {cnt}=totals(S.year);
+  rail.append(yearSwitch(ys,y=>{S.year=y;S.shown=50;render();})); if(ov&&(S.editBudget||S.tab==="vergelijk"))return; if(S.tab==="vermogen")return; const {cnt}=totals(S.year);
   rail.append(el("button",{class:"chip","aria-pressed":S.month===0,onclick:()=>{S.month=0;S.shown=50;render();}},"Heel jaar"));
   MONTHS.forEach((n,i)=>rail.append(el("button",{class:"chip"+(cnt[i+1]?"":" off"),"aria-pressed":S.month===i+1,onclick:()=>{S.month=i+1;S.shown=50;render();}},n)));
 }
@@ -397,7 +397,8 @@ function viewStatus(main){
   const stat=(l,v,b)=>el("div",{class:"stat"},el("div",{class:"l"},l),el("div",{class:"v"},eur0.format(v)),el("div",{class:"s"},hasB?"van "+eur0.format(b):" "));
   main.append(el("div",{class:"card hero"},
     el("div",{class:"herotop"},el("div",{},el("div",{class:"l"},"Over in "+per),el("div",{class:"big "+(rest<-0.5?"neg":"pos")},eur0.format(rest))),
-      el("button",{class:"btn"+(hasB?"":" pri"),id:"budget-btn",onclick:()=>{S.editBudget=true;render();window.scrollTo(0,0);}},hasB?"Budget bewerken":"Budget invullen")),
+      el("div",{class:"herobtns"},el("button",{class:"btn"+(hasB?"":" pri"),id:"budget-btn",onclick:()=>{S.editBudget=true;render();window.scrollTo(0,0);}},hasB?"Budget bewerken":"Budget invullen"),
+        hasB?el("button",{class:"btn",id:"compare-btn",onclick:goCompare},"Vergelijk per maand"):null)),
     el("div",{class:"stats"},stat("Inkomsten",A.inc,B.inc),stat("Uitgaven",A.uit,B.uit),stat("Gespaard",A.sp,B.sp))));
   if(!S.tx.length){ main.append(el("div",{class:"note info"},"Nog geen transacties ingelezen.",el("button",{class:"btn sm",onclick:()=>{S.tab="importeren";go();}},"Importeren"))); return; }
   if(x.unkN[x.m])main.append(el("div",{class:"note"},el("span",{},nTx(x.unkN[x.m])+" zonder categorie (wel meegeteld in Over)"),el("span",{class:"tools"},aiButton(),el("button",{class:"btn sm",onclick:()=>{S.tab="transacties";S.fUnk=true;S.fCat="";S.shown=50;go();}},"Zelf toewijzen"))));
@@ -447,7 +448,7 @@ function viewBudgetEdit(main){
   if(S.budgets[Y-1]&&Object.keys(S.budgets[Y-1]).length)more.push(el("button",{class:"btn sm",onclick:()=>{ if(Object.keys(yb).length&&!confirm("Het budget van "+Y+" wordt vervangen door dat van "+(Y-1)+". Doorgaan?"))return; S.budgets[Y]=JSON.parse(JSON.stringify(S.budgets[Y-1])); saveBudgets(); render(); }},"Neem "+(Y-1)+" over"));
   if(Object.keys(yb).length)more.push(el("button",{class:"btn sm",onclick:()=>{ if(!confirm("Alle budgetten van "+Y+" wissen?"))return; delete S.budgets[Y]; saveBudgets(); render(); }},"Wissen"));
   main.append(el("div",{class:"card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Budget "+Y),el("div",{class:"prose"},"Vul bij ",el("b",{},"Elke maand")," één bedrag in voor het hele jaar, of per maand een eigen bedrag.")),
-    el("button",{class:"btn pri",onclick:()=>{S.editBudget=false;render();window.scrollTo(0,0);}},"Klaar")),more.length?el("div",{class:"tools"},...more):null));
+    el("button",{class:"btn pri",onclick:()=>{S.editBudget=false;render();window.scrollTo(0,0);}},"Klaar")),el("div",{class:"tools"},...more,el("button",{class:"btn sm",onclick:()=>{S.editBudget=false;goCompare();}},"Vergelijk per maand"))));
   const head=el("tr",{},el("th",{class:"cat"},""),el("th",{class:"all"},"Elke maand"),...MONTHS.map(m=>el("th",{},m)),el("th",{class:"yr"},"Jaar"));
   const body=el("tbody");
   GROUPS.forEach((grp,gi)=>{
@@ -465,6 +466,52 @@ function viewBudgetEdit(main){
   const foot=el("tfoot",{},el("tr",{class:"over"},el("th",{class:"cat"},"Over"),el("td",{class:"all"}),...MONTHS.map((m,j)=>ov(j+1)),ov(0)));
   main.append(el("div",{class:"bgridwrap"},el("table",{class:"bgrid"},el("thead",{},head),body,foot)));
   main.append(el("p",{class:"prose"},"Enter en de pijltjes verplaatsen je door de tabel. Je kunt ook een blok getallen uit Excel of Numbers plakken. Over = inkomsten min uitgaven en sparen."));
+}
+
+/* budget vs werkelijk: dezelfde tabel als het budget, maar alleen om te bekijken */
+// Per categorie en maand: het verschil met het budget (groen = gunstig), wat er werkelijk is uitgegeven of
+// ontvangen, of het budget zelf. Maanden zonder ingelezen transacties worden niet vergeleken.
+const CMP_MODES=[["verschil","Verschil"],["werkelijk","Werkelijk"],["budget","Budget"]];
+const fmtCell=(v,signed)=>{ const n=eur0.format(Math.abs(v)).replace("€","").trim(); return signed?(v>0.5?"+":v<-0.5?"−":"")+n:(v<-0.5?"−":"")+n; };
+function goCompare(){ S.tab="vergelijk"; go(); }
+function viewCompare(main){
+  const Y=S.year, mode=S.cmpMode||"verschil", {T,cnt,unkN}=totals(Y);
+  let from=0,upto=0; for(let k=1;k<=12;k++) if(cnt[k]){ if(!from)from=k; upto=k; }
+  const has=k=>k>=1&&cnt[k]>0;
+  const net=Array(13).fill(0); for(const t of S.tx) if(Math.floor(t.d/10000)===Y){ const k=Math.floor(t.d/100)%100; net[k]+=t.a; net[0]+=t.a; }
+  const budUpto=(fb)=>{ let s=0; for(let k=from;k<=upto;k++)s+=fb(k); return s; };
+  // Waarde voor één cel. a(k) = werkelijk, b(k) = budget, good = +1 als meer werkelijk gunstig is (inkomsten, sparen), −1 bij uitgaven.
+  const val=(a,b,good,k)=>{ if(mode==="budget")return {v:k?b(k):b(0),show:(k?b(k):b(0))>0.5};
+    if(mode==="werkelijk"){ if(k?!has(k):!upto)return {v:0,show:false}; const v=k?a(k):a(0); return {v,show:Math.abs(v)>=0.5}; }
+    if(k?!has(k):!upto)return {v:0,show:false};
+    const A=k?a(k):a(0), B=k?b(k):budUpto(b); const d=good*(A-B); return {v:d,show:Math.abs(A)>=0.5||Math.abs(B)>=0.5,diff:true,A,B}; };
+  const cellFor=(r,k,label,go2)=>{ const cls="c"+(r.diff&&r.show?(r.v>0.5?" pos":r.v<-0.5?" neg":" even"):"")+(k?"":" yr")+(r.show?"":" empty");
+    const tip=r.diff&&r.show?label+": werkelijk "+eur0.format(r.A)+", budget "+eur0.format(r.B)+(r.v>0.5?" → "+eur0.format(r.v)+" gunstig":r.v<-0.5?" → "+eur0.format(-r.v)+" ongunstig":" → precies op budget"):label;
+    const txt=r.show?fmtCell(r.v,!!r.diff):(mode!=="budget"&&k&&!has(k)?"·":"");
+    return el("td",{class:cls},go2?el("button",{title:tip,"aria-label":tip,onclick:go2},txt):el("span",{title:tip},txt)); };
+  const toTx=(c,k)=>()=>{ S.tab="transacties"; S.fCat=c; S.fUnk=false; S.month=k; S.shown=50; go(); };
+  const rows=[];
+  GROUPS.forEach(grp=>{ const good=grp.kind==="uit"?-1:1;
+    const cats=grp.cats.filter(c=>budgetOf(Y,c,0)>0.5||Math.abs((T[c]||[])[0]||0)>=0.5||(T[c]||[]).some(v=>Math.abs(v)>=0.5));
+    if(!cats.length)return;
+    rows.push(el("tr",{class:"grp"},el("th",{class:"cat"},grp.name),el("td",{colspan:13})));
+    for(const c of cats){ const a=k=>actual(grp,(T[c]||[])[k]||0), b=k=>budgetOf(Y,c,k);
+      rows.push(el("tr",{},el("th",{class:"cat",scope:"row"},c),...MONTHS.map((m,j)=>cellFor(val(a,b,good,j+1),j+1,c+", "+MONTHS_LONG[j],toTx(c,j+1))),cellFor(val(a,b,good,0),0,c+", heel "+Y,toTx(c,0)))); }
+    const ga=k=>cats.reduce((s,c)=>s+actual(grp,(T[c]||[])[k]||0),0), gb=k=>grp.cats.reduce((s,c)=>s+budgetOf(Y,c,k),0);
+    rows.push(el("tr",{class:"sum"},el("th",{class:"cat"},"Totaal"),...MONTHS.map((m,j)=>cellFor(val(ga,gb,good,j+1),j+1,grp.name+", "+MONTHS_LONG[j])),cellFor(val(ga,gb,good,0),0,grp.name+", heel "+Y))); });
+  const card=el("div",{class:"card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Budget vs werkelijk "+Y),
+      el("div",{class:"prose"},mode==="verschil"?"Per post en maand hoeveel je onder (groen) of boven (rood) je budget zit. Bij inkomsten en sparen is meer dan begroot groen.":mode==="werkelijk"?"Wat je per post en maand werkelijk hebt uitgegeven of ontvangen.":"Wat je per post en maand hebt begroot.")),
+      el("button",{class:"btn",onclick:()=>{ S.tab="overzicht"; S.editBudget=true; go(); }},"Budget bewerken")),
+    el("div",{class:"tools"},el("div",{class:"yearseg",role:"group","aria-label":"Weergave"},...CMP_MODES.map(([id,l])=>el("button",{class:"seg","aria-pressed":mode===id,onclick:()=>{S.cmpMode=id;render();}},l))),
+      el("span",{class:"of"},"Tik op een bedrag voor de transacties."+(upto&&upto<12&&mode!=="budget"?" · = nog geen transacties ingelezen.":""))));
+  main.append(card);
+  if(!rows.length){ main.append(el("div",{class:"empty"},"Nog geen budget of transacties in "+Y+".")); return; }
+  const ob=k=>overOf(Y,k), oa=k=>net[k];
+  const over=(k)=>{ const r=val(oa,ob,1,k); return cellFor(r,k,"Over"+(k?", "+MONTHS_LONG[k-1]:", heel "+Y)); };
+  const head=el("tr",{},el("th",{class:"cat"},""),...MONTHS.map((m,j)=>el("th",{class:has(j+1)||mode==="budget"?"":"nodata"},m)),el("th",{class:"yr"},"Jaar"+(mode==="verschil"&&upto&&(from>1||upto<12)?" ("+MONTHS[from-1].toLowerCase()+"–"+MONTHS[upto-1].toLowerCase()+")":"")));
+  const foot=el("tfoot",{},el("tr",{class:"over"},el("th",{class:"cat"},"Over"),...MONTHS.map((m,j)=>over(j+1)),over(0)));
+  main.append(el("div",{class:"bgridwrap"},el("table",{class:"bgrid cmp"},el("thead",{},head),el("tbody",{},...rows),foot)));
+  if(unkN[0]&&mode!=="budget")main.append(el("p",{class:"prose"},"De rij Over telt ook de "+nTx(unkN[0])+" zonder categorie mee. ",aiButton("Laat AI ze indelen","linkbtn")));
 }
 
 /* ---------- vermogen ---------- */
@@ -638,7 +685,7 @@ const TOUR=[
   {tab:"transacties",target:"#tabs [data-tab=transacties]",title:"2. Controleer je transacties",text:"Hier zie je alles wat je hebt ingelezen, met soort betaling, plaats en omschrijving. Tik op een transactie voor alle details. Kies een categorie, of tik op ＋ Regel zodat vergelijkbare transacties voortaan vanzelf goed gaan."},
   {tab:"regels",target:"#ai-card",title:"3. Laat AI je transacties indelen",text:"In het tabblad Regels en AI maakt een AI-chat zoals Claude of ChatGPT regels voor je, in drie stappen: vraag kopiëren, in de chat plakken, antwoord terugplakken. De knop ✨ Laat AI indelen brengt je hier vanaf elk scherm."},
   {tab:"overzicht",target:"#budget-btn",title:"4. Vul je budget in",text:"In een tabel met een rij per categorie en een kolom per maand. Bij Elke maand vul je één bedrag in voor het hele jaar."},
-  {tab:"overzicht",target:".hero",title:"5. Zie hoe je ervoor staat",text:"Bovenaan staat wat er over is in de gekozen maand of het jaar. Daaronder per categorie wat je uitgaf ten opzichte van je budget; rood betekent erover."},
+  {tab:"overzicht",target:".hero",title:"5. Zie hoe je ervoor staat",text:"Bovenaan staat wat er over is in de gekozen maand of het jaar. Daaronder per categorie wat je uitgaf ten opzichte van je budget; rood betekent erover. Met Vergelijk per maand zie je per post en per maand hoe je op budget zit."},
   {tab:"importeren",target:"#backup-card",title:"Maak af en toe een back-up",text:"Je gegevens staan alleen op dit toestel. Met een back-up raak je niets kwijt en kun je overstappen naar een ander toestel."},
   {target:"#help",title:"Klaar!",text:"Begin met het inlezen van je bankexport. Deze rondleiding kun je altijd opnieuw bekijken met de ?-knop."}
 ];
