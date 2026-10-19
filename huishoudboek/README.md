@@ -65,7 +65,8 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   *Over*, met de maanden als kolommen en een jaarkolom; alleen om te bekijken.
   Per hoofdcategorie vier regels: *Budget*, *Werkelijk*, *Verschil* (groen is
   gunstig) en *Resultaat* (het opgebouwde verschil tot en met die maand).
-  Maanden zonder ingelezen transacties worden niet vergeleken (·). Tik op een
+  Standaard zie je alleen de maanden tot en met de laatste maand met
+  transacties (de rest via *Toon ook …*), zodat de tabel compact blijft. Tik op een
   werkelijk bedrag voor alle transacties van die hoofdcategorie in die maand
   (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste lasten*).
 
