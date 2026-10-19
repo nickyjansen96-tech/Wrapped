@@ -10,10 +10,10 @@ function setAllMonths(Y, c, v) {
 }
 const cellId = (i, k) => "g-" + i + "-" + k;
 const monthSum = (grp, Y, k) => grp.cats.reduce((s, c) => s + budgetOf(Y, c, k), 0);
-function overOf(Y, k) {
-  const f = gi => monthSum(GROUPS[gi], Y, k);
-  return f(0) - f(1) - f(2) - f(3) - f(4);
-}
+// Begrote inkomsten, begrote uitgaven + sparen, en wat er dan overblijft (k = 0: hele jaar).
+const incOf = (Y, k) => monthSum(GROUPS[0], Y, k);
+const outOf = (Y, k) => GROUPS.slice(1).reduce((s, g) => s + monthSum(g, Y, k), 0);
+const overOf = (Y, k) => incOf(Y, k) - outOf(Y, k);
 const gridNum = v => (Math.abs(v) < 0.5 ? "" : eur0.format(v).replace("€", "").trim());
 // Na een wijziging alleen de getallen bijwerken, zodat cursor en toetsenbord in het volgende vak blijven.
 function gridRefresh(Y, c) {
@@ -34,13 +34,24 @@ function gridRefresh(Y, c) {
   for (let k = 0; k <= 12; k++) {
     const g = $("#gs-" + gi + "-" + k);
     if (g) g.textContent = gridNum(monthSum(GROUPS[gi], Y, k));
-    const o = $("#ov-" + k);
-    if (o) {
-      const v = overOf(Y, k);
-      o.textContent = Math.abs(v) < 0.5 ? "" : eur0.format(v);
-      o.className = "num " + (v < -0.5 ? "neg" : "pos");
+    for (const [id, f] of [
+      ["inc", incOf],
+      ["out", outOf],
+      ["ov", overOf],
+    ]) {
+      const o = $("#" + id + "-" + k);
+      if (o) o.replaceWith(sumCell(id, f, Y, k));
     }
   }
+}
+function sumCell(id, f, Y, k) {
+  const v = f(Y, k),
+    tone = id === "ov" ? (v < -0.5 ? " neg" : " pos") : "";
+  return el(
+    "td",
+    { class: "num" + tone + (k ? "" : " yr"), id: id + "-" + k },
+    Math.abs(v) < 0.5 ? "" : eur0.format(v),
+  );
 }
 // Pijltjes en Enter verplaatsen je door de tabel, zoals in een spreadsheet.
 function gridKey(e) {
@@ -267,32 +278,29 @@ function viewBudgetEdit(main) {
       ),
     );
   });
-  const ov = k => {
-    const v = overOf(Y, k);
-    return el(
-      "td",
-      { class: "num " + (v < -0.5 ? "neg" : "pos") + (k ? "" : " yr"), id: "ov-" + k },
-      Math.abs(v) < 0.5 ? "" : eur0.format(v),
+  // Onderaan: verwachte inkomsten tegenover uitgaven en sparen, per maand.
+  const sumRow = (id, label, f, cls) =>
+    el(
+      "tr",
+      { class: cls },
+      el("th", { class: "cat" }, label),
+      el("td", { class: "all" }),
+      ...MONTHS.map((m, j) => sumCell(id, f, Y, j + 1)),
+      sumCell(id, f, Y, 0),
     );
-  };
   const foot = el(
     "tfoot",
     {},
-    el(
-      "tr",
-      { class: "over" },
-      el("th", { class: "cat" }, "Over"),
-      el("td", { class: "all" }),
-      ...MONTHS.map((m, j) => ov(j + 1)),
-      ov(0),
-    ),
+    sumRow("inc", "Inkomsten (verwacht)", incOf, "inc"),
+    sumRow("out", "Uitgaven en sparen", outOf, "out"),
+    sumRow("ov", "Over", overOf, "over"),
   );
   main.append(el("div", { class: "bgridwrap" }, el("table", { class: "bgrid" }, el("thead", {}, head), body, foot)));
   main.append(
     el(
       "p",
       { class: "prose" },
-      "Enter en de pijltjes verplaatsen je door de tabel. Je kunt ook een blok getallen uit Excel of Numbers plakken. Over = inkomsten min uitgaven en sparen.",
+      "Enter en de pijltjes verplaatsen je door de tabel. Je kunt ook een blok getallen uit Excel of Numbers plakken. Onderaan zie je per maand de verwachte inkomsten tegenover de uitgaven en het sparen; Over is wat er dan overblijft.",
     ),
   );
 }

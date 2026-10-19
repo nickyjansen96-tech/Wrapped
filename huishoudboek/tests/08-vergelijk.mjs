@@ -51,9 +51,17 @@ const labels = await p.evaluate(() =>
   [...document.querySelectorAll(".bgrid.cmp tbody th.cat")].map(e => e.textContent),
 );
 ok(
-  "alleen hoofdcategorieën + Over",
+  "alleen hoofdcategorieën, daaronder inkomsten vs uitgaven",
   JSON.stringify(labels) ===
-    JSON.stringify(["Inkomsten", "Vaste lasten", "Variabele uitgaven", "Sparen en beleggen", "Over"]),
+    JSON.stringify([
+      "Inkomsten",
+      "Vaste lasten",
+      "Variabele uitgaven",
+      "Sparen en beleggen",
+      "Inkomsten",
+      "Uitgaven en sparen",
+      "Over",
+    ]),
   labels.join(", "),
 );
 ok("geen losse posten zoals Wonen", !labels.includes("Wonen"));

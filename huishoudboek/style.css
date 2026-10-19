@@ -1103,7 +1103,7 @@ details.fold > summary .of {
   background: var(--surface);
   border-radius: var(--r);
   overflow: auto;
-  max-height: calc(100dvh - 210px);
+  max-height: calc(100dvh - 300px);
   -webkit-overflow-scrolling: touch;
 }
 .bgrid {
@@ -1231,7 +1231,7 @@ details.fold > summary .of {
     min-width: 8.5rem;
   }
   .bgridwrap {
-    max-height: calc(100dvh - 190px);
+    max-height: calc(100dvh - 280px);
   }
 }
 .wrap.wide {
@@ -1901,4 +1901,42 @@ a.btn {
 .cmphead .btn {
   white-space: nowrap;
   flex: none;
+}
+
+/* samenvatting onder de budgettabel: de drie regels blijven onderaan in beeld tijdens het invullen */
+.bgrid tfoot tr.inc th,
+.bgrid tfoot tr.inc td,
+.bgrid tfoot tr.out th,
+.bgrid tfoot tr.out td {
+  height: 2.2rem;
+  font-weight: 600;
+}
+.bgrid tfoot tr.inc th,
+.bgrid tfoot tr.inc td {
+  bottom: calc(2.6rem + 2.2rem);
+  border-top: 2px solid var(--line);
+}
+.bgrid tfoot tr.out th,
+.bgrid tfoot tr.out td {
+  bottom: 2.6rem;
+  border-top: 0;
+}
+.bgrid tfoot tr.out th.cat,
+.bgrid tfoot tr.inc th.cat {
+  left: 0;
+}
+.bgrid tfoot td.num.pos {
+  color: var(--good);
+}
+.bgrid tfoot td.num.neg {
+  color: var(--bad);
+}
+/* inkomsten vs uitgaven onder de vergelijking */
+.ivu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ivu h2 {
+  font-size: 17px;
 }

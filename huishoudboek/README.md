@@ -53,22 +53,25 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   erover zit). Lege categorieën zijn verborgen. Tik op een categorie voor de
   transacties.
 - **Budget bewerken:** een tabel met een rij per categorie en een kolom per
-  maand, plus *Elke maand* (één bedrag voor het hele jaar) en het jaartotaal.
-  Per groep een totaalrij en onderaan *Over* per maand. Enter en de pijltjes
-  verplaatsen je door de tabel; je kunt ook een blok getallen uit Excel of
-  Numbers plakken. Verder: lege rijen vullen met je gemiddelde, budget van
-  vorig jaar overnemen, wissen.
+  maand, plus *Elke maand* (één bedrag voor het hele jaar) en het jaartotaal,
+  met per groep een totaalrij. Onderaan blijven drie regels in beeld:
+  *Inkomsten (verwacht)*, *Uitgaven en sparen* en *Over*, per maand en live
+  bijgewerkt. Enter en de pijltjes verplaatsen je door de tabel; je kunt ook
+  een blok getallen uit Excel of Numbers plakken. Verder: lege rijen vullen
+  met je gemiddelde, budget van vorig jaar overnemen, wissen.
 - Bij *Heel jaar* vergelijkt de app met het budget van de maanden waarover je
   transacties hebt ingelezen.
 - **Vergelijk per maand:** één tabel per hoofdcategorie (Inkomsten, Vaste
-  lasten, Variabele uitgaven, Reserveringen, Sparen en beleggen) en onderaan
-  *Over*, met de maanden als kolommen en een jaarkolom; alleen om te bekijken.
-  Per hoofdcategorie vier regels: *Budget*, *Werkelijk*, *Verschil* (groen is
+  lasten, Variabele uitgaven, Reserveringen, Sparen en beleggen) met alle
+  maanden als kolommen en een jaarkolom; alleen om te bekijken. Per
+  hoofdcategorie vier regels: *Budget*, *Werkelijk*, *Verschil* (groen is
   gunstig) en *Resultaat* (het opgebouwde verschil tot en met die maand).
-  Standaard zie je alleen de maanden tot en met de laatste maand met
-  transacties (de rest via *Toon ook …*), zodat de tabel compact blijft. Tik op een
-  werkelijk bedrag voor alle transacties van die hoofdcategorie in die maand
-  (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste lasten*).
+  Daaronder **Inkomsten vs uitgaven per maand**: inkomsten verwacht en
+  werkelijk, uitgaven en sparen begroot en werkelijk, en wat er over is
+  (verwacht en werkelijk). Maanden zonder ingelezen transacties worden niet
+  vergeleken (·); de jaarkolom telt alleen de maanden met transacties. Tik
+  op een werkelijk bedrag voor alle transacties van die hoofdcategorie in die
+  maand (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste lasten*).
 
 ## Regels laten maken door een AI-chat
 
