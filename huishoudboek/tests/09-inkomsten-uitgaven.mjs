@@ -76,21 +76,34 @@ const exp = await p.evaluate(() => {
   const net = k => S.tx.filter(t => Math.floor(t.d / 100) % 100 === k).reduce((s, t) => s + t.a, 0);
   const inc = k =>
     S.tx.filter(t => Math.floor(t.d / 100) % 100 === k && /WERKGEVER/.test(t.t)).reduce((s, t) => s + t.a, 0);
-  return { inc1: inc(1), out1: inc(1) - net(1), net1: net(1) };
+  const sp = k =>
+    -S.tx.filter(t => Math.floor(t.d / 100) % 100 === k && /SPAARREKENING/.test(t.t)).reduce((s, t) => s + t.a, 0);
+  return { inc1: inc(1), sp1: sp(1), uit1: inc(1) - net(1) - sp(1), net1: net(1) };
 });
 const iv = await row("Inkomsten", "Verwacht"),
   iw = await row("Inkomsten", "Werkelijk"),
-  ub = await row("Uitgaven en sparen", "Begroot"),
-  uw = await row("Uitgaven en sparen", "Werkelijk"),
+  ub = await row("Uitgaven", "Begroot"),
+  uw = await row("Uitgaven", "Werkelijk"),
+  sb = await row("Sparen", "Begroot"),
+  sw = await row("Sparen", "Werkelijk"),
   ov = await row("Over", "Verwacht"),
   ow = await row("Over", "Werkelijk");
 ok("inkomsten verwacht per maand (ook okt–dec)", iv[0] === "3.150" && iv[11] === "3.150", iv[0] + " … " + iv[11]);
 ok("inkomsten werkelijk jan", num(iw[0]) === Math.round(exp.inc1), iw[0]);
-ok("uitgaven en sparen begroot = 1100+600+300", ub[0] === "2.000", ub[0]);
-ok("uitgaven en sparen werkelijk jan", Math.abs(num(uw[0]) - Math.round(exp.out1)) <= 1, uw[0] + " vs " + exp.out1);
+ok("uitgaven begroot = 1100+600", ub[0] === "1.700", ub[0]);
+ok(
+  "uitgaven werkelijk jan (zonder sparen)",
+  Math.abs(num(uw[0]) - Math.round(exp.uit1)) <= 1,
+  uw[0] + " vs " + exp.uit1,
+);
+ok(
+  "sparen apart: begroot 300, werkelijk jan",
+  sb[0] === "300" && num(sw[0]) === Math.round(exp.sp1),
+  sb[0] + " / " + sw[0],
+);
 ok("over verwacht = 3150 − 2000", ov[0] === "1.150", ov[0]);
 ok("over werkelijk jan", Math.abs(num(ow[0]) - Math.round(exp.net1)) <= 1, ow[0]);
-ok("okt: werkelijk nog leeg (·)", iw[9] === "·" && uw[9] === "·" && ow[9] === "·");
+ok("okt: werkelijk nog leeg (·)", iw[9] === "·" && uw[9] === "·" && sw[9] === "·" && ow[9] === "·");
 ok("jaarkolom t/m sep", (await p.locator(".ivu thead th.yr").innerText()) === "t/m sep" && ov[12] === "10.350", ov[12]);
 await p.screenshot({ path: SP + "/vergelijk-ivu.png", fullPage: true });
 // samenvatting onder de budgettabel
@@ -105,15 +118,21 @@ const foot = await p.evaluate(() =>
   ),
 );
 ok(
-  "budgettabel: inkomsten, uitgaven en sparen, over",
-  foot.join(" | ") === "Inkomsten (verwacht): € 3.150 | Uitgaven en sparen: € 2.000 | Over: € 1.150",
+  "budgettabel: inkomsten, uitgaven, sparen apart, over",
+  foot.join(" | ") === "Inkomsten (verwacht): € 3.150 | Uitgaven: € 1.700 | Sparen: € 300 | Over: € 1.150",
   foot.join(" | "),
 );
 const I = await p.evaluate(() => ALLCATS.indexOf("Boodschappen"));
 await p.fill("#g-" + I + "-3", "1000");
 await p.press("#g-" + I + "-3", "Tab");
-const mar = await p.evaluate(() => ["inc", "out", "ov"].map(id => document.getElementById(id + "-3").textContent));
-ok("samenvatting werkt live bij (mrt)", mar[1].includes("2.400") && mar[2].includes("750"), mar.join(" | "));
+const mar = await p.evaluate(() =>
+  ["inc", "uit", "sp", "ov"].map(id => document.getElementById(id + "-3").textContent),
+);
+ok(
+  "samenvatting werkt live bij (mrt)",
+  mar[1].includes("2.100") && mar[2].includes("300") && mar[3].includes("750"),
+  mar.join(" | "),
+);
 await p.screenshot({ path: SP + "/budget-samenvatting.png" });
 for (const [w, h] of [
   [375, 667],

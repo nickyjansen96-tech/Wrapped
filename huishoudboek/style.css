@@ -1903,26 +1903,33 @@ a.btn {
   flex: none;
 }
 
-/* samenvatting onder de budgettabel: de drie regels blijven onderaan in beeld tijdens het invullen */
+/* samenvatting onder de budgettabel: de vier regels blijven onderaan in beeld tijdens het invullen */
 .bgrid tfoot tr.inc th,
 .bgrid tfoot tr.inc td,
-.bgrid tfoot tr.out th,
-.bgrid tfoot tr.out td {
+.bgrid tfoot tr.uit th,
+.bgrid tfoot tr.uit td,
+.bgrid tfoot tr.sp th,
+.bgrid tfoot tr.sp td {
   height: 2.2rem;
   font-weight: 600;
+  border-top: 0;
 }
 .bgrid tfoot tr.inc th,
 .bgrid tfoot tr.inc td {
-  bottom: calc(2.6rem + 2.2rem);
+  bottom: calc(2.6rem + 4.4rem);
   border-top: 2px solid var(--line);
 }
-.bgrid tfoot tr.out th,
-.bgrid tfoot tr.out td {
-  bottom: 2.6rem;
-  border-top: 0;
+.bgrid tfoot tr.uit th,
+.bgrid tfoot tr.uit td {
+  bottom: calc(2.6rem + 2.2rem);
 }
-.bgrid tfoot tr.out th.cat,
-.bgrid tfoot tr.inc th.cat {
+.bgrid tfoot tr.sp th,
+.bgrid tfoot tr.sp td {
+  bottom: 2.6rem;
+}
+.bgrid tfoot tr.inc th.cat,
+.bgrid tfoot tr.uit th.cat,
+.bgrid tfoot tr.sp th.cat {
   left: 0;
 }
 .bgrid tfoot td.num.pos {

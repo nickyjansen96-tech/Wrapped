@@ -10,10 +10,11 @@ function setAllMonths(Y, c, v) {
 }
 const cellId = (i, k) => "g-" + i + "-" + k;
 const monthSum = (grp, Y, k) => grp.cats.reduce((s, c) => s + budgetOf(Y, c, k), 0);
-// Begrote inkomsten, begrote uitgaven + sparen, en wat er dan overblijft (k = 0: hele jaar).
+// Begrote inkomsten, uitgaven (vaste lasten, variabel, reserveringen) en sparen, en wat er overblijft (k = 0: jaar).
 const incOf = (Y, k) => monthSum(GROUPS[0], Y, k);
-const outOf = (Y, k) => GROUPS.slice(1).reduce((s, g) => s + monthSum(g, Y, k), 0);
-const overOf = (Y, k) => incOf(Y, k) - outOf(Y, k);
+const uitOf = (Y, k) => GROUPS.filter(g => g.kind === "uit").reduce((s, g) => s + monthSum(g, Y, k), 0);
+const spOf = (Y, k) => GROUPS.filter(g => g.kind === "spaar").reduce((s, g) => s + monthSum(g, Y, k), 0);
+const overOf = (Y, k) => incOf(Y, k) - uitOf(Y, k) - spOf(Y, k);
 const gridNum = v => (Math.abs(v) < 0.5 ? "" : eur0.format(v).replace("€", "").trim());
 // Na een wijziging alleen de getallen bijwerken, zodat cursor en toetsenbord in het volgende vak blijven.
 function gridRefresh(Y, c) {
@@ -36,7 +37,8 @@ function gridRefresh(Y, c) {
     if (g) g.textContent = gridNum(monthSum(GROUPS[gi], Y, k));
     for (const [id, f] of [
       ["inc", incOf],
-      ["out", outOf],
+      ["uit", uitOf],
+      ["sp", spOf],
       ["ov", overOf],
     ]) {
       const o = $("#" + id + "-" + k);
@@ -292,7 +294,8 @@ function viewBudgetEdit(main) {
     "tfoot",
     {},
     sumRow("inc", "Inkomsten (verwacht)", incOf, "inc"),
-    sumRow("out", "Uitgaven en sparen", outOf, "out"),
+    sumRow("uit", "Uitgaven", uitOf, "uit"),
+    sumRow("sp", "Sparen", spOf, "sp"),
     sumRow("ov", "Over", overOf, "over"),
   );
   main.append(el("div", { class: "bgridwrap" }, el("table", { class: "bgrid" }, el("thead", {}, head), body, foot)));
@@ -300,7 +303,7 @@ function viewBudgetEdit(main) {
     el(
       "p",
       { class: "prose" },
-      "Enter en de pijltjes verplaatsen je door de tabel. Je kunt ook een blok getallen uit Excel of Numbers plakken. Onderaan zie je per maand de verwachte inkomsten tegenover de uitgaven en het sparen; Over is wat er dan overblijft.",
+      "Enter en de pijltjes verplaatsen je door de tabel. Je kunt ook een blok getallen uit Excel of Numbers plakken. Onderaan zie je per maand de verwachte inkomsten, de uitgaven en wat je spaart; Over is wat er dan overblijft.",
     ),
   );
 }

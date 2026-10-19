@@ -162,18 +162,19 @@ function viewCompare(main) {
       el(
         "p",
         { class: "prose" },
-        "Uitgaven en sparen (werkelijk) en Over tellen ook de " + nTx(unkN[0]) + " zonder categorie mee. ",
+        "Uitgaven (werkelijk) en Over tellen ook de " + nTx(unkN[0]) + " zonder categorie mee. ",
         aiButton("Laat AI ze indelen", "linkbtn"),
       ),
     );
 }
 
-// Onderaan: verwachte en werkelijke inkomsten tegenover uitgaven en sparen, en wat er overblijft, per maand.
+// Onderaan: verwachte en werkelijke inkomsten, uitgaven en sparen, en wat er overblijft, per maand.
 // De jaarkolom telt (net als de tabel erboven) alleen de maanden met ingelezen transacties.
 function incomeVsSpending(Y, has, from, upto, net, toTx) {
   const { T } = totals(Y);
   const incAct = k => GROUPS[0].cats.reduce((s, c) => s + ((T[c] || [])[k] || 0), 0);
-  const outAct = k => incAct(k) - net[k]; // alles wat geen inkomsten is: uitgaven, sparen en zonder categorie
+  const spAct = k => GROUPS[4].cats.reduce((s, c) => s - ((T[c] || [])[k] || 0), 0);
+  const uitAct = k => incAct(k) - net[k] - spAct(k); // alles behalve inkomsten en sparen, ook zonder categorie
   const yearOf = f => {
     let s = 0;
     for (let k = from; k <= upto; k++) s += f(k);
@@ -182,8 +183,10 @@ function incomeVsSpending(Y, has, from, upto, net, toTx) {
   const rows = [
     ["Inkomsten", "Verwacht", k => incOf(Y, k), false],
     ["Inkomsten", "Werkelijk", incAct, true, toTx("grp:Inkomsten")],
-    ["Uitgaven en sparen", "Begroot", k => outOf(Y, k), false],
-    ["Uitgaven en sparen", "Werkelijk", outAct, true],
+    ["Uitgaven", "Begroot", k => uitOf(Y, k), false],
+    ["Uitgaven", "Werkelijk", uitAct, true],
+    ["Sparen", "Begroot", k => spOf(Y, k), false],
+    ["Sparen", "Werkelijk", spAct, true, toTx("grp:Sparen en beleggen")],
     ["Over", "Verwacht", k => overOf(Y, k), false, null, true],
     ["Over", "Werkelijk", k => net[k], true, null, true],
   ];

@@ -54,8 +54,8 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   transacties.
 - **Budget bewerken:** een tabel met een rij per categorie en een kolom per
   maand, plus *Elke maand* (één bedrag voor het hele jaar) en het jaartotaal,
-  met per groep een totaalrij. Onderaan blijven drie regels in beeld:
-  *Inkomsten (verwacht)*, *Uitgaven en sparen* en *Over*, per maand en live
+  met per groep een totaalrij. Onderaan blijven vier regels in beeld:
+  *Inkomsten (verwacht)*, *Uitgaven*, *Sparen* en *Over*, per maand en live
   bijgewerkt. Enter en de pijltjes verplaatsen je door de tabel; je kunt ook
   een blok getallen uit Excel of Numbers plakken. Verder: lege rijen vullen
   met je gemiddelde, budget van vorig jaar overnemen, wissen.
@@ -67,7 +67,7 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   hoofdcategorie vier regels: *Budget*, *Werkelijk*, *Verschil* (groen is
   gunstig) en *Resultaat* (het opgebouwde verschil tot en met die maand).
   Daaronder **Inkomsten vs uitgaven per maand**: inkomsten verwacht en
-  werkelijk, uitgaven en sparen begroot en werkelijk, en wat er over is
+  werkelijk, uitgaven en sparen (los van elkaar) begroot en werkelijk, en wat er over is
   (verwacht en werkelijk). Maanden zonder ingelezen transacties worden niet
   vergeleken (·); de jaarkolom telt alleen de maanden met transacties. Tik
   op een werkelijk bedrag voor alle transacties van die hoofdcategorie in die
