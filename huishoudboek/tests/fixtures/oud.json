@@ -1,0 +1,1 @@
+{"app":"huishoudboek","version":1,"profile":"Nicky","rules":[{"k":"WONINGCORP","c":"Huur (oud)"},{"k":"WERKGEVER","c":"Salaris of uitkering"}],"overrides":{},"budgets":{},"wealth":{},"months":{"2026-01":[{"i":"x1","d":20260110,"a":-1100,"t":"SEPA Incasso Naam: WONINGCORP  Omschrijving: Huur"},{"i":"x2","d":20260105,"a":2500,"t":"SEPA Naam: WERKGEVER BV  Omschrijving: Salaris"}]}}

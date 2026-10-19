@@ -124,8 +124,18 @@ de app onthoudt welke gebruiker het laatst open stond.
 
 ## Bestanden
 
-- `index.html`, `style.css`, `app.js` — de app zelf
-- `sw.js` — service worker voor offline gebruik; verhoog `VERSION` na wijzigingen
+- `index.html`, `style.css` — de pagina en de opmaak
+- `js/` — de app, in deze volgorde geladen:
+  `basis` (indeling, toestand, hulpfuncties) · `categorie` (regels toepassen) ·
+  `opslag` (gebruikers en opslag) · `rekenen` (totalen en budgetten) ·
+  `weergave` (kop, jaar- en maandkeuze) · `transacties` · `regels` (incl. AI) ·
+  `overzicht` · `budget` (budgettabel) · `vergelijk` (budget vs werkelijk) ·
+  `vermogen` · `importeren` (inlezen en back-ups) · `gebruikers` ·
+  `rondleiding` · `start` (navigatie en opstarten)
+- `sw.js` — service worker voor offline gebruik; verhoog `VERSION` (en
+  `APP_VERSION` in `js/basis.js`) na wijzigingen
 - `manifest.webmanifest`, `icon*.png`, `icon.svg` — installatie en iconen
 - `vendor/xlsx.full.min.js` — SheetJS 0.18.5 voor het lezen van Excel-exports
   (Apache-2.0, zie `vendor/xlsx-LICENSE`)
+- `tests/` — browsertests, zie `tests/README.md`
+- `.prettierrc` — opmaak van de code (`npx prettier --write js style.css`)
