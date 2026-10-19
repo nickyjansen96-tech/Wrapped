@@ -11,7 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="21";
+const APP_VERSION="22";
 const TABS=["overzicht","vergelijk","vermogen","transacties","regels","importeren","gebruikers"];
 
 /* ---------- toestand ---------- */
@@ -469,49 +469,53 @@ function viewBudgetEdit(main){
 }
 
 /* budget vs werkelijk: dezelfde tabel als het budget, maar alleen om te bekijken */
-// Per categorie en maand: het verschil met het budget (groen = gunstig), wat er werkelijk is uitgegeven of
-// ontvangen, of het budget zelf. Maanden zonder ingelezen transacties worden niet vergeleken.
-const CMP_MODES=[["verschil","Verschil"],["werkelijk","Werkelijk"],["budget","Budget"]];
+// Eén tabel: per categorie vier regels (budget, werkelijk, verschil, resultaat) met de maanden als kolommen.
+// Verschil is gunstig (+) als je minder uitgaf of meer ontving/spaarde dan begroot. Resultaat is het opgebouwde
+// verschil tot en met die maand. Maanden zonder ingelezen transacties worden niet vergeleken (·).
 const fmtCell=(v,signed)=>{ const n=eur0.format(Math.abs(v)).replace("€","").trim(); return signed?(v>0.5?"+":v<-0.5?"−":"")+n:(v<-0.5?"−":"")+n; };
 function goCompare(){ S.tab="vergelijk"; go(); }
 function viewCompare(main){
-  const Y=S.year, mode=S.cmpMode||"verschil", {T,cnt,unkN}=totals(Y);
+  const Y=S.year, {T,cnt,unkN}=totals(Y);
   let from=0,upto=0; for(let k=1;k<=12;k++) if(cnt[k]){ if(!from)from=k; upto=k; }
-  const has=k=>k>=1&&cnt[k]>0;
-  const net=Array(13).fill(0); for(const t of S.tx) if(Math.floor(t.d/10000)===Y){ const k=Math.floor(t.d/100)%100; net[k]+=t.a; net[0]+=t.a; }
-  const budUpto=(fb)=>{ let s=0; for(let k=from;k<=upto;k++)s+=fb(k); return s; };
-  // Waarde voor één cel. a(k) = werkelijk, b(k) = budget, good = +1 als meer werkelijk gunstig is (inkomsten, sparen), −1 bij uitgaven.
-  const val=(a,b,good,k)=>{ if(mode==="budget")return {v:k?b(k):b(0),show:(k?b(k):b(0))>0.5};
-    if(mode==="werkelijk"){ if(k?!has(k):!upto)return {v:0,show:false}; const v=k?a(k):a(0); return {v,show:Math.abs(v)>=0.5}; }
-    if(k?!has(k):!upto)return {v:0,show:false};
-    const A=k?a(k):a(0), B=k?b(k):budUpto(b); const d=good*(A-B); return {v:d,show:Math.abs(A)>=0.5||Math.abs(B)>=0.5,diff:true,A,B}; };
-  const cellFor=(r,k,label,go2)=>{ const cls="c"+(r.diff&&r.show?(r.v>0.5?" pos":r.v<-0.5?" neg":" even"):"")+(k?"":" yr")+(r.show?"":" empty");
-    const tip=r.diff&&r.show?label+": werkelijk "+eur0.format(r.A)+", budget "+eur0.format(r.B)+(r.v>0.5?" → "+eur0.format(r.v)+" gunstig":r.v<-0.5?" → "+eur0.format(-r.v)+" ongunstig":" → precies op budget"):label;
-    const txt=r.show?fmtCell(r.v,!!r.diff):(mode!=="budget"&&k&&!has(k)?"·":"");
-    return el("td",{class:cls},go2?el("button",{title:tip,"aria-label":tip,onclick:go2},txt):el("span",{title:tip},txt)); };
-  const toTx=(c,k)=>()=>{ S.tab="transacties"; S.fCat=c; S.fUnk=false; S.month=k; S.shown=50; go(); };
-  const rows=[];
+  const has=k=>cnt[k]>0;
+  const net=Array(13).fill(0); for(const t of S.tx) if(Math.floor(t.d/10000)===Y)net[Math.floor(t.d/100)%100]+=t.a;
+  const KINDS=["Budget","Werkelijk","Verschil","Resultaat"];
+  // a(k)/b(k): werkelijk en budget in maand k; good: +1 als meer werkelijk gunstig is (inkomsten, sparen), −1 bij uitgaven.
+  const block=(label,a,b,good,toTx,cls)=>{
+    const rows=KINDS.map(()=>[]); let cum=0, sa=0, sb=0;
+    for(let k=1;k<=12;k++){ const B=b(k), on=has(k), A=on?a(k):0, d=good*(A-B);
+      if(on){ cum+=d; sa+=A; sb+=B; }
+      rows[0].push({v:B,show:B>=0.5||(on&&Math.abs(A)>=0.5)});
+      rows[1].push({v:A,show:on,go:toTx&&toTx(k)});
+      rows[2].push({v:d,show:on,signed:true});
+      rows[3].push({v:cum,show:on,signed:true,res:true}); }
+    const dy=good*(sa-sb), any=!!upto;
+    rows[0].push({v:sb,show:any}); rows[1].push({v:sa,show:any,go:toTx&&toTx(0)}); rows[2].push({v:dy,show:any,signed:true}); rows[3].push({v:dy,show:any,signed:true,res:true});
+    return rows.map((cells,ri)=>el("tr",{class:"k"+ri+(ri===0?" first":"")+(cls?" "+cls:"")},
+      ri===0?el("th",{class:"cat",rowspan:4,scope:"rowgroup"},label):null, el("th",{class:"kind",scope:"row"},KINDS[ri]),
+      ...cells.map((c,j)=>{ const yr=j===12, tone=c.signed&&c.show?(c.v>0.5?" pos":c.v<-0.5?" neg":" even"):"";
+        const txt=c.show?fmtCell(c.v,!!c.signed):(ri>0&&!yr?"·":"");
+        const tip=label+", "+(yr?"jaar":MONTHS_LONG[j])+": "+KINDS[ri].toLowerCase()+" "+(c.show?eur0.format(c.v):"nog geen gegevens");
+        return el("td",{class:"c"+tone+(yr?" yr":"")+(c.show?"":" empty")},c.go&&c.show?el("button",{title:tip+" — tik voor de transacties","aria-label":tip,onclick:c.go},txt):el("span",{title:tip},txt)); }))); };
+  const toTx=c=>k=>()=>{ S.tab="transacties"; S.fCat=c; S.fUnk=false; S.month=k; S.shown=50; go(); };
+  const body=[];
   GROUPS.forEach(grp=>{ const good=grp.kind==="uit"?-1:1;
-    const cats=grp.cats.filter(c=>budgetOf(Y,c,0)>0.5||Math.abs((T[c]||[])[0]||0)>=0.5||(T[c]||[]).some(v=>Math.abs(v)>=0.5));
+    const cats=grp.cats.filter(c=>budgetOf(Y,c,0)>=0.5||(T[c]||[]).some(v=>Math.abs(v)>=0.5));
     if(!cats.length)return;
-    rows.push(el("tr",{class:"grp"},el("th",{class:"cat"},grp.name),el("td",{colspan:13})));
-    for(const c of cats){ const a=k=>actual(grp,(T[c]||[])[k]||0), b=k=>budgetOf(Y,c,k);
-      rows.push(el("tr",{},el("th",{class:"cat",scope:"row"},c),...MONTHS.map((m,j)=>cellFor(val(a,b,good,j+1),j+1,c+", "+MONTHS_LONG[j],toTx(c,j+1))),cellFor(val(a,b,good,0),0,c+", heel "+Y,toTx(c,0)))); }
-    const ga=k=>cats.reduce((s,c)=>s+actual(grp,(T[c]||[])[k]||0),0), gb=k=>grp.cats.reduce((s,c)=>s+budgetOf(Y,c,k),0);
-    rows.push(el("tr",{class:"sum"},el("th",{class:"cat"},"Totaal"),...MONTHS.map((m,j)=>cellFor(val(ga,gb,good,j+1),j+1,grp.name+", "+MONTHS_LONG[j])),cellFor(val(ga,gb,good,0),0,grp.name+", heel "+Y))); });
-  const card=el("div",{class:"card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Budget vs werkelijk "+Y),
-      el("div",{class:"prose"},mode==="verschil"?"Per post en maand hoeveel je onder (groen) of boven (rood) je budget zit. Bij inkomsten en sparen is meer dan begroot groen.":mode==="werkelijk"?"Wat je per post en maand werkelijk hebt uitgegeven of ontvangen.":"Wat je per post en maand hebt begroot.")),
+    body.push(el("tr",{class:"grp"},el("th",{class:"cat",colspan:2},grp.name),el("td",{colspan:13})));
+    for(const c of cats)body.push(...block(c,k=>actual(grp,(T[c]||[])[k]||0),k=>budgetOf(Y,c,k),good,toTx(c)));
+    if(cats.length>1)body.push(...block("Totaal "+grp.name.toLowerCase(),k=>cats.reduce((s,c)=>s+actual(grp,(T[c]||[])[k]||0),0),k=>grp.cats.reduce((s,c)=>s+budgetOf(Y,c,k),0),good,null,"sum")); });
+  main.append(el("div",{class:"card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Budget vs werkelijk "+Y),
+      el("div",{class:"prose"},"Per post en maand: wat je begrootte, wat het werkelijk was, het verschil en het resultaat (het opgebouwde verschil tot en met die maand). Groen is gunstig: minder uitgegeven, of meer ontvangen of gespaard dan begroot.")),
       el("button",{class:"btn",onclick:()=>{ S.tab="overzicht"; S.editBudget=true; go(); }},"Budget bewerken")),
-    el("div",{class:"tools"},el("div",{class:"yearseg",role:"group","aria-label":"Weergave"},...CMP_MODES.map(([id,l])=>el("button",{class:"seg","aria-pressed":mode===id,onclick:()=>{S.cmpMode=id;render();}},l))),
-      el("span",{class:"of"},"Tik op een bedrag voor de transacties."+(upto&&upto<12&&mode!=="budget"?" · = nog geen transacties ingelezen.":""))));
-  main.append(card);
-  if(!rows.length){ main.append(el("div",{class:"empty"},"Nog geen budget of transacties in "+Y+".")); return; }
-  const ob=k=>overOf(Y,k), oa=k=>net[k];
-  const over=(k)=>{ const r=val(oa,ob,1,k); return cellFor(r,k,"Over"+(k?", "+MONTHS_LONG[k-1]:", heel "+Y)); };
-  const head=el("tr",{},el("th",{class:"cat"},""),...MONTHS.map((m,j)=>el("th",{class:has(j+1)||mode==="budget"?"":"nodata"},m)),el("th",{class:"yr"},"Jaar"+(mode==="verschil"&&upto&&(from>1||upto<12)?" ("+MONTHS[from-1].toLowerCase()+"–"+MONTHS[upto-1].toLowerCase()+")":"")));
-  const foot=el("tfoot",{},el("tr",{class:"over"},el("th",{class:"cat"},"Over"),...MONTHS.map((m,j)=>over(j+1)),over(0)));
-  main.append(el("div",{class:"bgridwrap"},el("table",{class:"bgrid cmp"},el("thead",{},head),el("tbody",{},...rows),foot)));
-  if(unkN[0]&&mode!=="budget")main.append(el("p",{class:"prose"},"De rij Over telt ook de "+nTx(unkN[0])+" zonder categorie mee. ",aiButton("Laat AI ze indelen","linkbtn")));
+    el("div",{class:"of"},"Tik op een werkelijk bedrag voor de transacties."+(upto&&upto<12?" · = nog geen transacties ingelezen.":""))));
+  if(!body.length){ main.append(el("div",{class:"empty"},"Nog geen budget of transacties in "+Y+".")); return; }
+  body.push(el("tr",{class:"grp"},el("th",{class:"cat",colspan:2},"Alles samen"),el("td",{colspan:13})));
+  body.push(...block("Over",k=>net[k],k=>overOf(Y,k),1,null,"over"));
+  const yrLabel="Jaar"+(upto&&(from>1||upto<12)?" ("+MONTHS[from-1].toLowerCase()+"–"+MONTHS[upto-1].toLowerCase()+")":"");
+  const head=el("tr",{},el("th",{class:"cat"},""),el("th",{class:"kind"},""),...MONTHS.map((m,j)=>el("th",{class:has(j+1)?"":"nodata"},m)),el("th",{class:"yr"},yrLabel));
+  main.append(el("div",{class:"bgridwrap"},el("table",{class:"bgrid cmp"},el("thead",{},head),el("tbody",{},...body))));
+  if(unkN[0])main.append(el("p",{class:"prose"},"Over telt ook de "+nTx(unkN[0])+" zonder categorie mee. ",aiButton("Laat AI ze indelen","linkbtn")));
 }
 
 /* ---------- vermogen ---------- */
