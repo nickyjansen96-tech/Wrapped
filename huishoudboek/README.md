@@ -60,13 +60,14 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   vorig jaar overnemen, wissen.
 - Bij *Heel jaar* vergelijkt de app met het budget van de maanden waarover je
   transacties hebt ingelezen.
-- **Vergelijk per maand:** één tabel met dezelfde opbouw als het budget
-  (categorieën per groep, maanden als kolommen, jaarkolom), maar alleen om te
-  bekijken. Per categorie vier regels: *Budget*, *Werkelijk*, *Verschil*
-  (groen is gunstig) en *Resultaat* (het opgebouwde verschil tot en met die
-  maand). Met groepstotalen en onderaan *Over*. Maanden zonder ingelezen
-  transacties worden niet vergeleken (·); de jaarkolom telt alleen de
-  maanden met transacties. Tik op een werkelijk bedrag voor de transacties.
+- **Vergelijk per maand:** één tabel per hoofdcategorie (Inkomsten, Vaste
+  lasten, Variabele uitgaven, Reserveringen, Sparen en beleggen) en onderaan
+  *Over*, met de maanden als kolommen en een jaarkolom; alleen om te bekijken.
+  Per hoofdcategorie vier regels: *Budget*, *Werkelijk*, *Verschil* (groen is
+  gunstig) en *Resultaat* (het opgebouwde verschil tot en met die maand).
+  Maanden zonder ingelezen transacties worden niet vergeleken (·). Tik op een
+  werkelijk bedrag voor alle transacties van die hoofdcategorie in die maand
+  (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste lasten*).
 
 ## Regels laten maken door een AI-chat
 

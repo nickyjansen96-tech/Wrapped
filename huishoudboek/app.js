@@ -11,7 +11,7 @@ const UNK="Onbekend";
 const ALLCATS=GROUPS.flatMap(g=>g.cats);
 const MONTHS=["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
 const MONTHS_LONG=["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
-const APP_VERSION="22";
+const APP_VERSION="23";
 const TABS=["overzicht","vergelijk","vermogen","transacties","regels","importeren","gebruikers"];
 
 /* ---------- toestand ---------- */
@@ -213,9 +213,9 @@ function viewTx(main){
   const m=S.month,q=strip(S.fText);
   const inPeriod=S.tx.filter(t=>Math.floor(t.d/10000)===S.year&&(!m||Math.floor(t.d/100)%100===m));
   const unkCount=inPeriod.filter(t=>catOf(t)===UNK).length;
-  const list=inPeriod.filter(t=>(!S.fUnk||catOf(t)===UNK)&&(!S.fCat||catOf(t)===S.fCat)&&(!q||(t.s||(t.s=strip(t.t))).includes(q)));
+  const list=inPeriod.filter(t=>(!S.fUnk||catOf(t)===UNK)&&(!S.fCat||(S.fCat.startsWith("grp:")?GROUPS.find(g=>"grp:"+g.name===S.fCat)?.cats.includes(catOf(t)):catOf(t)===S.fCat))&&(!q||(t.s||(t.s=strip(t.t))).includes(q)));
   const fsel=el("select",{id:"fcat","aria-label":"Filter op categorie",onchange:e=>{S.fCat=e.target.value;S.shown=50;render();}},el("option",{value:""},"Alle categorieën"),
-    GROUPS.map(g=>el("optgroup",{label:g.name},g.cats.map(c=>el("option",{value:c,selected:c===S.fCat},c)))));
+    GROUPS.map(g=>el("optgroup",{label:g.name},el("option",{value:"grp:"+g.name,selected:S.fCat==="grp:"+g.name},"Alle "+g.name.toLowerCase()),g.cats.map(c=>el("option",{value:c,selected:c===S.fCat},c)))));
   main.append(el("div",{class:"tools field"},
     el("input",{id:"ftext",class:"grow",type:"search",placeholder:"Zoek op naam, plaats of omschrijving",value:S.fText,oninput:e=>{S.fText=e.target.value;S.shown=50;clearTimeout(viewTx.t);viewTx.t=setTimeout(()=>{render();const i=$("#ftext");i.focus();i.setSelectionRange(i.value.length,i.value.length);},250);}}),
     fsel, (unkCount||S.fUnk)?el("button",{class:"chip toggle",id:"funk","aria-pressed":S.fUnk,onclick:()=>{S.fUnk=!S.fUnk;S.shown=50;render();}},"Zonder categorie ("+unkCount+")"):null));
@@ -497,20 +497,17 @@ function viewCompare(main){
         const txt=c.show?fmtCell(c.v,!!c.signed):(ri>0&&!yr?"·":"");
         const tip=label+", "+(yr?"jaar":MONTHS_LONG[j])+": "+KINDS[ri].toLowerCase()+" "+(c.show?eur0.format(c.v):"nog geen gegevens");
         return el("td",{class:"c"+tone+(yr?" yr":"")+(c.show?"":" empty")},c.go&&c.show?el("button",{title:tip+" — tik voor de transacties","aria-label":tip,onclick:c.go},txt):el("span",{title:tip},txt)); }))); };
-  const toTx=c=>k=>()=>{ S.tab="transacties"; S.fCat=c; S.fUnk=false; S.month=k; S.shown=50; go(); };
+  // Alleen de hoofdcategorieën (Inkomsten, Vaste lasten, …); de losse posten staan op het overzicht en bij Transacties.
+  const toTx=f=>k=>()=>{ S.tab="transacties"; S.fCat=f; S.fUnk=false; S.month=k; S.shown=50; go(); };
   const body=[];
   GROUPS.forEach(grp=>{ const good=grp.kind==="uit"?-1:1;
-    const cats=grp.cats.filter(c=>budgetOf(Y,c,0)>=0.5||(T[c]||[]).some(v=>Math.abs(v)>=0.5));
-    if(!cats.length)return;
-    body.push(el("tr",{class:"grp"},el("th",{class:"cat",colspan:2},grp.name),el("td",{colspan:13})));
-    for(const c of cats)body.push(...block(c,k=>actual(grp,(T[c]||[])[k]||0),k=>budgetOf(Y,c,k),good,toTx(c)));
-    if(cats.length>1)body.push(...block("Totaal "+grp.name.toLowerCase(),k=>cats.reduce((s,c)=>s+actual(grp,(T[c]||[])[k]||0),0),k=>grp.cats.reduce((s,c)=>s+budgetOf(Y,c,k),0),good,null,"sum")); });
+    if(!grp.cats.some(c=>budgetOf(Y,c,0)>=0.5||(T[c]||[]).some(v=>Math.abs(v)>=0.5)))return;
+    body.push(...block(grp.name,k=>grp.cats.reduce((s,c)=>s+actual(grp,(T[c]||[])[k]||0),0),k=>grp.cats.reduce((s,c)=>s+budgetOf(Y,c,k),0),good,toTx("grp:"+grp.name))); });
   main.append(el("div",{class:"card"},el("div",{class:"herotop"},el("div",{},el("h2",{},"Budget vs werkelijk "+Y),
-      el("div",{class:"prose"},"Per post en maand: wat je begrootte, wat het werkelijk was, het verschil en het resultaat (het opgebouwde verschil tot en met die maand). Groen is gunstig: minder uitgegeven, of meer ontvangen of gespaard dan begroot.")),
+      el("div",{class:"prose"},"Per hoofdcategorie en maand: wat je begrootte, wat het werkelijk was, het verschil en het resultaat (het opgebouwde verschil tot en met die maand). Groen is gunstig: minder uitgegeven, of meer ontvangen of gespaard dan begroot.")),
       el("button",{class:"btn",onclick:()=>{ S.tab="overzicht"; S.editBudget=true; go(); }},"Budget bewerken")),
     el("div",{class:"of"},"Tik op een werkelijk bedrag voor de transacties."+(upto&&upto<12?" · = nog geen transacties ingelezen.":""))));
   if(!body.length){ main.append(el("div",{class:"empty"},"Nog geen budget of transacties in "+Y+".")); return; }
-  body.push(el("tr",{class:"grp"},el("th",{class:"cat",colspan:2},"Alles samen"),el("td",{colspan:13})));
   body.push(...block("Over",k=>net[k],k=>overOf(Y,k),1,null,"over"));
   const yrLabel="Jaar"+(upto&&(from>1||upto<12)?" ("+MONTHS[from-1].toLowerCase()+"–"+MONTHS[upto-1].toLowerCase()+")":"");
   const head=el("tr",{},el("th",{class:"cat"},""),el("th",{class:"kind"},""),...MONTHS.map((m,j)=>el("th",{class:has(j+1)?"":"nodata"},m)),el("th",{class:"yr"},yrLabel));
