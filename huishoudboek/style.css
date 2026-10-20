@@ -1947,3 +1947,35 @@ a.btn {
 .ivu h2 {
   font-size: 17px;
 }
+
+/* posten onder een hoofdcategorie: alleen het verschil */
+.bgrid.cmp tr.sub th.cat {
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.15;
+  color: var(--muted);
+  padding: 0 8px 0 22px;
+  vertical-align: middle;
+}
+.bgrid.cmp tr.sub td.c button,
+.bgrid.cmp tr.sub td.c > span {
+  font-size: 13px;
+}
+@media (pointer: fine) {
+  .bgrid.cmp tr.sub td.c button,
+  .bgrid.cmp tr.sub td.c > span {
+    height: 1.75rem;
+    line-height: 1.75rem;
+  }
+}
+.bgrid.cmp tr.sublast td,
+.bgrid.cmp tr.sublast th {
+  border-bottom: 0.5px solid var(--line);
+}
+@media (max-width: 640px) {
+  .bgrid.cmp tr.sub th.cat {
+    padding: 0 6px 0 14px;
+    hyphens: auto;
+    overflow-wrap: anywhere;
+  }
+}

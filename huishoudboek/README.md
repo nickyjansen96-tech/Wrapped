@@ -72,6 +72,8 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   maanden als kolommen en een jaarkolom; alleen om te bekijken. Per
   hoofdcategorie vier regels: *Budget*, *Werkelijk*, *Verschil* (groen is
   gunstig) en *Resultaat* (het opgebouwde verschil tot en met die maand).
+  Daaronder de losse posten (Wonen, Boodschappen, …) met alleen hun
+  *Verschil*; tik erop voor de transacties van die post.
   Daaronder **Inkomsten vs uitgaven per maand**: inkomsten verwacht en
   werkelijk, uitgaven en sparen (los van elkaar) begroot en werkelijk, en wat er over is
   (verwacht en werkelijk). Maanden zonder ingelezen transacties worden niet

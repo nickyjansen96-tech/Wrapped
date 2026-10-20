@@ -60,7 +60,7 @@ const MONTHS_LONG = [
   "november",
   "december",
 ];
-const APP_VERSION = "28";
+const APP_VERSION = "29";
 const TABS = ["overzicht", "vergelijk", "vermogen", "transacties", "regels", "importeren", "gebruikers"];
 
 /* ---------- toestand ---------- */

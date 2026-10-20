@@ -1,6 +1,6 @@
 // Bewaart de app-bestanden zodat het Huishoudboek ook offline opent.
 // Verhoog VERSION bij elke wijziging aan de bestanden hieronder.
-const VERSION = "hhb-v28";
+const VERSION = "hhb-v29";
 const FILES = [
   "./",
   "index.html",

@@ -51,13 +51,21 @@ const labels = await p.evaluate(() =>
   [...document.querySelectorAll(".bgrid.cmp tbody th.cat")].map(e => e.textContent),
 );
 ok(
-  "alleen hoofdcategorieën, daaronder inkomsten vs uitgaven",
+  "hoofdcategorieën met posten, daaronder inkomsten vs uitgaven",
   JSON.stringify(labels) ===
     JSON.stringify([
       "Inkomsten",
+      "Salaris of uitkering",
       "Vaste lasten",
+      "Wonen",
+      "Energie en water",
+      "Verzekeringen",
+      "Abonnementen",
       "Variabele uitgaven",
+      "Boodschappen",
+      "Brandstof, parkeren en OV",
       "Sparen en beleggen",
+      "Buffer",
       "Inkomsten",
       "Uitgaven",
       "Sparen",
@@ -65,7 +73,10 @@ ok(
     ]),
   labels.join(", "),
 );
-ok("geen losse posten zoals Wonen", !labels.includes("Wonen"));
+const subKinds = await p.evaluate(() =>
+  [...document.querySelectorAll(".bgrid.cmp tr.sub")].map(tr => tr.querySelector("th.kind").textContent),
+);
+ok("posten tonen alleen het verschil", subKinds.length > 0 && subKinds.every(k => k === "Verschil"), subKinds.join());
 const rowCells = async (cat, kind) =>
   p.evaluate(
     ([cat, kind]) => {
@@ -105,6 +116,20 @@ ok(
   "vaste lasten jaar resultaat",
   Math.abs(num(R[R.length - 1]) - Math.round(exp.dy)) <= 1,
   R[R.length - 1] + " vs " + exp.dy.toFixed(0),
+);
+// De verschillen per post tellen op tot het verschil van de hoofdcategorie.
+const subD = [];
+for (const c of ["Wonen", "Energie en water", "Verzekeringen", "Abonnementen"])
+  subD.push(await rowCells(c, "Verschil"));
+ok(
+  "posten: één regel met alle maanden en jaar",
+  subD.every(r => r && r.length === 13),
+  subD.map(r => r?.length).join(),
+);
+ok(
+  "som verschil posten = verschil vaste lasten",
+  [0, 12].every(j => Math.abs(subD.reduce((s, r) => s + num(r[j]), 0) - num(D[j])) <= 2),
+  subD.map(r => r[0]).join(" ") + " vs " + D[0],
 );
 await p.screenshot({ path: SP + "/cmp3.png" });
 await p.evaluate(() => {

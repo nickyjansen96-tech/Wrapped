@@ -84,7 +84,7 @@ function viewCompare(main) {
       ),
     );
   };
-  // Alleen de hoofdcategorieën (Inkomsten, Vaste lasten, …); de losse posten staan op het overzicht en bij Transacties.
+  // Per hoofdcategorie (Inkomsten, Vaste lasten, …) vier regels; per post daaronder alleen het verschil.
   const toTx = f => k => () => {
     S.tab = "transacties";
     S.fCat = f;
@@ -106,7 +106,46 @@ function viewCompare(main) {
         toTx("grp:" + grp.name),
       ),
     );
+    // Daaronder per post alleen het verschil met het budget.
+    const subs = grp.cats.filter(c => budgetOf(Y, c, 0) >= 0.5 || (T[c] || []).some(v => Math.abs(v) >= 0.5));
+    subs.forEach((c, i) => body.push(subRow(c, grp, i === subs.length - 1)));
   });
+  function subRow(c, grp, lastSub) {
+    const good = grp.kind === "uit" ? -1 : 1,
+      A = k => actual(grp, (T[c] || [])[k] || 0),
+      B = k => budgetOf(Y, c, k);
+    let dy = 0;
+    const cells = [];
+    for (let k = 1; k <= last; k++) {
+      const d = good * (A(k) - B(k));
+      if (has(k)) dy += d;
+      cells.push({ v: d, show: has(k), k });
+    }
+    cells.push({ v: dy, show: !!upto, k: 0 });
+    return el(
+      "tr",
+      { class: "sub" + (lastSub ? " sublast" : "") },
+      el("th", { class: "cat", scope: "row", title: c }, c),
+      el("th", { class: "kind" }, "Verschil"),
+      ...cells.map(({ v, show, k }) => {
+        const tone = show ? (v > 0.5 ? " pos" : v < -0.5 ? " neg" : " even") : "",
+          txt = show ? fmtCell(v, true) : k ? "·" : "",
+          tip =
+            c +
+            ", " +
+            (k ? MONTHS_LONG[k - 1] : "jaar") +
+            ": verschil " +
+            (show ? eur0.format(v) : "nog geen gegevens");
+        return el(
+          "td",
+          { class: "c" + tone + (k ? "" : " yr") + (show ? "" : " empty") },
+          show
+            ? el("button", { title: tip + " — tik voor de transacties", "aria-label": tip, onclick: toTx(c)(k) }, txt)
+            : el("span", { title: tip }, txt),
+        );
+      }),
+    );
+  }
   main.append(
     el(
       "div",
@@ -118,7 +157,7 @@ function viewCompare(main) {
         el(
           "div",
           { class: "of" },
-          "Resultaat = opgebouwd verschil. Groen is gunstig. Tik op een werkelijk bedrag voor de transacties." +
+          "Per post staat alleen het verschil. Resultaat = opgebouwd verschil. Groen is gunstig. Tik op een bedrag voor de transacties." +
             (upto && upto < 12 ? " · = nog geen transacties ingelezen." : ""),
         ),
       ),
