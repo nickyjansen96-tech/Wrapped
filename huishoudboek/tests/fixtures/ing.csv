@@ -1,0 +1,7 @@
+"Datum";"Naam / Omschrijving";"Rekening";"Tegenrekening";"Code";"Af Bij";"Bedrag (EUR)";"Mutatiesoort";"Mededelingen";"Saldo na mutatie";"Tag"
+"20260915";"ALBERT HEIJN 1234 UTRECHT NLD";"NL00INGB0000000001";"";"BA";"Af";"23,45";"Betaalautomaat";"Pasvolgnr: 001 15-09-2026 17:31 Transactie: A1B2C3 Term: TERM01 Apple Pay";"1976,55";""
+"20260914";"BCK*CAFETARIA DE HARMONIE NLD";"NL00INGB0000000001";"";"BA";"Af";"8,50";"Betaalautomaat";"Kaartnr: 1234 56** **** 7890 Datum: 14-09-2026 Tijd: 21:05 Transactie: X1 Term: Y1";"2000,00";""
+"20260910";"Zalando Payments Berlin DEU";"NL00INGB0000000001";"";"GT";"Af";"59,95";"Online bankieren";"Kaartnr: 1234 56** **** 7890 Datum: 10-09-2026 Tijd: 20:27 Transactie: X2 Term: Y2";"2008,50";""
+"20260905";"Werkgever Voorbeeld BV";"NL00INGB0000000001";"NL11BANK0123456789";"OV";"Bij";"3.150,00";"Overschrijving";"Naam: Werkgever Voorbeeld BV Omschrijving: Salaris september IBAN: NL11BANK0123456789 Valutadatum: 05-09-2026";"2068,45";""
+"20260901";"Woningcorporatie Test";"NL00INGB0000000001";"NL22BANK0987654321";"IC";"Af";"1.100,00";"Incasso";"Naam: Woningcorporatie Test Omschrijving: Huur september Machtiging ID: M123 Incassant ID: NL00ZZZ000000000000 IBAN: NL22BANK0987654321 Doorlopende incasso Valutadatum: 01-09-2026";"-1081,55";""
+"20260901";"GELDMAAT STATIONSPLEIN 1 UTRECHT";"NL00INGB0000000001";"";"GM";"Af";"50,00";"Geldautomaat";"Kaartnr: 1234 56** **** 7890 Datum: 01-09-2026 Tijd: 09:12 Transactie: X3 Term: Y3";"18,45";""

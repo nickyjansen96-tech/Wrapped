@@ -48,7 +48,7 @@ await p.setInputFiles("#file", FX + "/mut-1252.TXT");
 await p.waitForSelector(".note.info");
 ok(
   "TXT win-1252: 6 transacties",
-  (await p.locator(".note.info").innerText()).startsWith("6 nieuwe"),
+  (await p.locator(".note.info").innerText()).includes("herkend. 6 nieuwe"),
   await p.locator(".note.info").innerText(),
 );
 const cafe = await S(() => S.tx.find(t => t.t.includes("Zwaan")).t);

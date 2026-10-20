@@ -6,15 +6,15 @@ const titleCase = s => s.toLowerCase().replace(/(^|[\s\-'(])\p{L}/gu, m => m.toU
 function txInfo(t) {
   const raw = t.t,
     s = raw.replace(/\s+/g, " ").trim(),
-    [name, desc] = who(raw);
+    [name, desc] = partyOf(t);
   const f = re => {
     const m = re.exec(raw);
     return m ? m[1].trim() : "";
   };
   const iban = f(/\/IBAN\/([^/]+)/) || f(/IBAN:\s*([A-Z]{2}\d{2}[A-Z0-9]+)/);
   const kenmerk = f(/\/EREF\/([^/]+)/) || f(/Kenmerk:\s*(.+?)(?:\s{2,}|$)/);
-  let time = "",
-    place = "";
+  let time = (/\bTijd: (\d{2}:\d{2})/.exec(raw) || [])[1] || "",
+    place = t.p || "";
   const m = /\d{2}\.\d{2}\.\d{2}\/(\d{2})[.:](\d{2})\s*(.*)$/.exec(s);
   if (m) {
     time = m[1] + ":" + m[2];

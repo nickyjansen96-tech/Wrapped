@@ -1,7 +1,7 @@
 # Huishoudboek (app)
 
-Het Huishoudboek-artifact als installeerbare web-app (PWA): ABN AMRO-export
-inlezen, transacties categoriseren met regels, budgetteren per maand en je
+Het Huishoudboek-artifact als installeerbare web-app (PWA): bankexport
+inlezen (ABN AMRO, ING, Rabobank, bunq, Knab of een andere CSV), transacties categoriseren met regels, budgetteren per maand en je
 vermogen volgen. Werkt offline en bewaart alle gegevens alleen op je eigen
 toestel (in de browser); er gaat niets naar een server.
 
@@ -30,6 +30,12 @@ financiële gegevens: die blijven op je toestel.
 - **Computer (Chrome/Edge):** het installeer-icoon in de adresbalk.
 
 ## Transacties
+
+Inlezen via **Importeren**. De app herkent zelf van welke bank het bestand
+komt: ABN AMRO (Excel of TXT), ING, Rabobank, bunq en Knab (CSV). Andere
+CSV-bestanden werken ook als ze kolommen hebben voor datum, bedrag en naam of
+omschrijving. Dubbele transacties worden overgeslagen, dus je kunt een
+overlappende periode gerust opnieuw inlezen.
 
 Per transactie: datum met weekdag, naam, soort betaling (betaalpas, incasso,
 overboeking, iDEAL, …) met plaats en tijd of de omschrijving, het bedrag en
@@ -133,7 +139,8 @@ de app onthoudt welke gebruiker het laatst open stond.
   `opslag` (gebruikers en opslag) · `rekenen` (totalen en budgetten) ·
   `weergave` (kop, jaar- en maandkeuze) · `transacties` · `regels` (incl. AI) ·
   `overzicht` · `budget` (budgettabel) · `vergelijk` (budget vs werkelijk) ·
-  `vermogen` · `importeren` (inlezen en back-ups) · `gebruikers` ·
+  `vermogen` · `banken` (bankbestanden herkennen) ·
+  `importeren` (inlezen en back-ups) · `gebruikers` ·
   `rondleiding` · `start` (navigatie en opstarten)
 - `sw.js` — service worker voor offline gebruik; verhoog `VERSION` (en
   `APP_VERSION` in `js/basis.js`) na wijzigingen

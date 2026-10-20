@@ -157,12 +157,17 @@ function dropSaves() {
   clearTimeout(saveTimer);
   for (const id of Object.keys(pend)) delete pend[id];
 }
+// Wat er van een transactie wordt bewaard (n, p, o alleen als ze er zijn).
+function txStore(t) {
+  const r = { i: t.i, d: t.d, a: t.a, t: t.t };
+  for (const k of ["n", "p", "o"]) if (t[k]) r[k] = t[k];
+  return r;
+}
 const saveOverrides = () => save("overrides", () => ({ map: S.overrides }));
 const saveRules = () => save("rules", () => ({ list: S.rules.map(r => ({ k: r.k, c: r.c })) }));
 const saveWealth = () => save("wealth", () => ({ years: S.wealth }));
 const saveBudgets = () => save("budgets", () => ({ years: S.budgets }));
-const saveMonth = key =>
-  save("tx-" + key, () => ({ rows: S.months[key].map(t => ({ i: t.i, d: t.d, a: t.a, t: t.t })) }));
+const saveMonth = key => save("tx-" + key, () => ({ rows: S.months[key].map(txStore) }));
 const saveAll = () => {
   saveOverrides();
   saveRules();
@@ -179,7 +184,11 @@ function loadDoc(id, v) {
   else if (id === "budgets") S.budgets = JSON.parse(JSON.stringify(v.years || {}));
   else if (id.startsWith("tx-"))
     S.months[id.slice(3)] = (v.rows || [])
-      .map(r => ({ i: String(r.i), d: +r.d, a: +r.a, t: String(r.t ?? "") }))
+      .map(r => {
+        const t = { i: String(r.i), d: +r.d, a: +r.a, t: String(r.t ?? "") };
+        for (const k of ["n", "p", "o"]) if (typeof r[k] === "string" && r[k]) t[k] = r[k];
+        return t;
+      })
       .filter(r => r.d > 19000101 && r.d < 21001231 && Number.isFinite(r.a)); // kapotte regels (bijv. uit een beschadigde back-up) overslaan
 }
 function indexTx() {

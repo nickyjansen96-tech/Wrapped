@@ -1,7 +1,7 @@
 {
   "name": "Huishoudboek",
   "short_name": "Huishoudboek",
-  "description": "ABN AMRO-export inlezen, categoriseren, budgetteren en je vermogen volgen.",
+  "description": "Bankexport inlezen, categoriseren, budgetteren en je vermogen volgen.",
   "lang": "nl",
   "start_url": "./",
   "scope": "./",

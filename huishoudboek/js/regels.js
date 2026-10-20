@@ -5,21 +5,27 @@
 // plak je terug. Rekeningnummers, pasnummers en kenmerken worden eerst uit de omschrijvingen gehaald.
 function txType(t) {
   const s = t.replace(/\s+/g, " ");
-  if (/^BEA\b/.test(s)) return "betaalpas";
-  if (/^GEA\b/.test(s)) return "geldautomaat";
-  if (/^eCom\b/.test(s)) return "online met betaalpas";
+  if (/^BEA\b|Betaalautomaat/.test(s)) return "betaalpas";
+  if (/^GEA\b|Geldautomaat/.test(s)) return "geldautomaat";
+  if (/^eCom\b/.test(s) || (/Kaartnr:/.test(s) && /Online bankieren/i.test(s))) return "online met betaalpas";
   if (/iDEAL/i.test(s)) return "iDEAL";
   if (/Tikkie/i.test(s)) return "Tikkie";
   if (/SEPA Incasso|\/TRTP\/SEPA Incasso|Incasso/i.test(s)) return "automatische incasso";
   if (/Periodieke overb/i.test(s)) return "periodieke overboeking";
-  if (/Overboeking|\/TRTP\/SEPA OVERBOEKING/i.test(s)) return "overboeking";
-  if (/^ABN AMRO|Kosten|Rente/i.test(s)) return "bankkosten of rente";
+  if (/Overboeking|Overschrijving|Online bankieren|Verzamelbetaling|\/TRTP\/SEPA OVERBOEKING/i.test(s))
+    return "overboeking";
+  if (/^ABN AMRO|Kosten|Rente|Diversen/i.test(s)) return "bankkosten of rente";
+  if (/Kaartnr:/.test(s)) return "betaalpas";
   return "overig";
 }
 function cleanDesc(t) {
   return t
     .replace(/\/TRTP\/[^/]*|\/IBAN\/[^/]*|\/BIC\/[^/]*|\/EREF\/[^/]*|\/MARF\/[^/]*|\/CSID\/[^/]*/g, " ")
-    .replace(/\b[A-Z]{2}\d{2}[A-Z]{4}\d{6,}\b/g, "")
+    .replace(/\bKaartnr:\s*[\d* ]+/g, " ")
+    .replace(/\b(?:Datum\/Tijd|Valutadatum|Datum):\s*[\d-]+(?:\s[\d:]+)?/g, " ")
+    .replace(/\bTijd:\s*[\d:]+/g, " ")
+    .replace(/\b(?:Machtiging ID|Incassant ID|Transactie|Term|RRN|Koers|Opslag)\s*:\s*\S+(?:\s+EUR)?/g, " ")
+    .replace(/\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b/g, "")
     .replace(/\b(IBAN|BIC|Kenmerk|Machtiging|Incassant|Betalingskenm\.?|ID debiteur|EREF|MARF|CSID)\s*:\s*\S+/gi, " ")
     .replace(/,?PAS\d+/g, " ")
     .replace(/\bNR:\S+/g, " ")
@@ -37,7 +43,7 @@ function aiPrompt(max = 150) {
   // Filialen samen nemen: "Jumbo 55" en "Jumbo 12" worden één tegenpartij "Jumbo".
   for (const t of S.tx) {
     if (catOf(t) !== UNK) continue;
-    const [full] = who(t.t);
+    const [full] = partyOf(t);
     const name = full.replace(/\s+\d{1,5}$/, "") || full,
       key = strip(name);
     const g = groups.get(key) || { name, type: txType(t.t), n: 0, sum: 0, min: t.d, max: t.d, ex: new Set() };
@@ -82,7 +88,7 @@ function aiPrompt(max = 150) {
         .join("\n")
     : "(nog geen)";
   return [
-    "Ik houd een huishoudboekje bij voor mijn Nederlandse bankrekening (ABN AMRO). Help me regels te maken die mijn transacties automatisch in een categorie zetten.",
+    "Ik houd een huishoudboekje bij voor mijn Nederlandse bankrekening. Help me regels te maken die mijn transacties automatisch in een categorie zetten.",
     "",
     "Zo werkt een regel: als het trefwoord ergens in de omschrijving van een transactie staat, krijgt die transactie de categorie. Hoofdletters en spaties tellen niet mee; * is een joker (bijv. Albert*Heijn).",
     '- Kies trefwoorden die de partij herkennen, ook bij toekomstige betalingen: laat filiaalnummers, plaatsen, datums en bedragen weg (dus "Albert Heijn", niet "Albert Heijn 1234").',

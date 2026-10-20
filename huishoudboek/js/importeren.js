@@ -29,43 +29,6 @@ function toDate(v) {
   const n = parseInt(String(v).replace(/\D/g, ""), 10);
   return n > 19000000 && n < 21000000 ? n : NaN;
 }
-function parseRows(rows) {
-  const out = [];
-  if (!rows.length) return out;
-  let ci = { d: 2, b: 3, a: 6, t: 7 },
-    start = 0;
-  const head = rows[0].map(x => String(x).trim().toLowerCase());
-  if (head.includes("transactiedatum")) {
-    ci = {
-      d: head.indexOf("transactiedatum"),
-      b: head.indexOf("beginsaldo"),
-      a: head.indexOf("transactiebedrag"),
-      t: head.indexOf("omschrijving"),
-    };
-    start = 1;
-  } else if (head.includes("transactiondate")) {
-    ci = {
-      d: head.indexOf("transactiondate"),
-      b: head.indexOf("startsaldo"),
-      a: head.indexOf("amount"),
-      t: head.indexOf("description"),
-    };
-    start = 1;
-  } else if (rows[0].length >= 8 && isNaN(toDate(rows[0][3]))) ci = { d: 2, b: 3, a: 6, t: 7 };
-  else ci = { d: 2, b: 4, a: 6, t: 7 };
-  if (ci.d < 0 || ci.a < 0 || ci.t < 0) return null;
-  for (let r = start; r < rows.length; r++) {
-    const R = rows[r];
-    if (!R || R.length < 4) continue;
-    const d = toDate(R[ci.d]),
-      a = toNum(R[ci.a]),
-      b = ci.b >= 0 ? toNum(R[ci.b]) : 0,
-      t = String(R[ci.t] ?? "");
-    if (isNaN(d) || isNaN(a)) continue;
-    out.push({ i: txId(d, a, isNaN(b) ? 0 : b, t), d, a, t });
-  }
-  return out;
-}
 // TXT-exports zijn niet altijd UTF-8; dan lezen als Windows-1252 zodat é en ë goed blijven.
 function decodeText(buf) {
   try {
@@ -81,21 +44,18 @@ async function importFile(file) {
   try {
     const buf = await file.arrayBuffer();
     let rows;
-    if (/\.(txt|tab|tsv)$/i.test(file.name))
-      rows = decodeText(buf)
-        .split(/\r?\n/)
-        .filter(Boolean)
-        .map(l => l.split("\t"));
+    if (/\.(txt|tab|tsv|csv)$/i.test(file.name)) rows = parseDelimited(decodeText(buf));
     else {
       const wb = XLSX.read(buf, { type: "array", cellDates: true });
       rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: "" });
     }
-    const parsed = parseRows(rows);
-    if (!parsed || !parsed.length) {
+    const res = parseBankRows(rows),
+      parsed = res ? res.txs : [];
+    if (!parsed.length) {
       S.importMsg =
         "In " +
         file.name +
-        " staan geen transacties in het ABN AMRO-formaat. Download je mutaties als Excel (XLS) of TXT en probeer het opnieuw.";
+        " herkent de app geen transacties. Gebruik de export van je bank: ABN AMRO (Excel of TXT), ING, Rabobank, bunq of Knab (CSV), of een CSV met kolommen voor datum, bedrag en omschrijving.";
       render();
       return;
     }
@@ -121,6 +81,7 @@ async function importFile(file) {
     pickDefaults();
     if (years().includes(y0) && !added) S.year = y0;
     S.importMsg =
+      (res.bank !== "CSV" ? res.bank + "-export herkend. " : "") +
       (added ? nTx(added).replace(/ transactie/, " nieuwe transactie") + " toegevoegd" : "Geen nieuwe transacties") +
       " uit " +
       file.name +
@@ -150,9 +111,7 @@ function backupData() {
     overrides: S.overrides,
     budgets: S.budgets,
     wealth: S.wealth,
-    months: Object.fromEntries(
-      Object.entries(S.months).map(([k, rows]) => [k, rows.map(t => ({ i: t.i, d: t.d, a: t.a, t: t.t }))]),
-    ),
+    months: Object.fromEntries(Object.entries(S.months).map(([k, rows]) => [k, rows.map(txStore)])),
   };
 }
 async function exportBackup() {
@@ -261,7 +220,11 @@ function viewImport(main) {
       },
     },
     el("h2", {}, "Bankexport inlezen"),
-    el("div", { class: "prose" }, "ABN AMRO, Excel of TXT. Dubbele transacties worden overgeslagen."),
+    el(
+      "div",
+      { class: "prose" },
+      "ABN AMRO, ING, Rabobank, bunq, Knab of een andere CSV. Dubbele transacties worden overgeslagen.",
+    ),
     el("button", { class: "btn pri", onclick: () => inp.click() }, "Bestand kiezen"),
     inp,
   );

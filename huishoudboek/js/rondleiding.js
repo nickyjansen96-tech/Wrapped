@@ -23,7 +23,7 @@ const TOUR = [
     tab: "importeren",
     target: ".drop .btn.pri",
     title: "1. Lees je bankexport in",
-    text: "Download bij ABN AMRO je mutaties als Excel of TXT en kies dat bestand hier. Je mag overlappende periodes inlezen; dubbele transacties worden overgeslagen.",
+    text: "Download bij je bank je transacties (ABN AMRO, ING, Rabobank, bunq, Knab: Excel, CSV of TXT) en kies dat bestand hier. Je mag overlappende periodes inlezen; dubbele transacties worden overgeslagen.",
   },
   {
     tab: "transacties",

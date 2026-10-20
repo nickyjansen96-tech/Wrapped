@@ -42,6 +42,8 @@ const catOf = t => {
   const o = S.overrides[t.i];
   return o && CATSET.has(o) ? o : autoCat(t);
 };
+// Naam en korte omschrijving van de tegenpartij; bij ING, Rabobank enz. staan die apart opgeslagen.
+const partyOf = t => (t.n ? [t.n, t.o || ""] : who(t.t));
 function who(d) {
   let m = /\/NAME\/([^/]*)/.exec(d) || /Naam: (.*?)(\s{2,}|Omschrijving|$)/.exec(d);
   if (m) {
