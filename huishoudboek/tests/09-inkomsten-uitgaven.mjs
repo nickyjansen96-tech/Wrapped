@@ -102,9 +102,14 @@ ok(
   sb[0] + " / " + sw[0],
 );
 ok("over verwacht = 3150 − 2000", ov[0] === "1.150", ov[0]);
+ok("heel jaar: verwacht over 12 × 1.150", ov[13] === "13.800" && ow[13] === "", ov[13] + "|" + ow[13]);
 ok("over werkelijk jan", Math.abs(num(ow[0]) - Math.round(exp.net1)) <= 1, ow[0]);
 ok("okt: werkelijk nog leeg (·)", iw[9] === "·" && uw[9] === "·" && sw[9] === "·" && ow[9] === "·");
-ok("jaarkolom t/m sep", (await p.locator(".ivu thead th.yr").innerText()) === "t/m sep" && ov[12] === "10.350", ov[12]);
+ok(
+  "jaarkolom t/m sep",
+  (await p.locator(".ivu thead th.yr").first().innerText()) === "t/m sep" && ov[12] === "10.350",
+  ov[12],
+);
 await p.screenshot({ path: SP + "/vergelijk-ivu.png", fullPage: true });
 // samenvatting onder de budgettabel
 await p.evaluate(() => {

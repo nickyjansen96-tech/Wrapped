@@ -107,23 +107,31 @@ const exp = await p.evaluate(() => {
 });
 const B = await rowCells("Vaste lasten", "Budget"),
   A = await rowCells("Vaste lasten", "Werkelijk"),
-  D = await rowCells("Vaste lasten", "Verschil"),
-  R = await rowCells("Vaste lasten", "Resultaat");
+  D = await rowCells("Vaste lasten", "Verschil");
 ok("vaste lasten budget = som posten", B[0] === "1.400", B[0]);
 ok("vaste lasten werkelijk jan", Math.abs(num(A[0]) - Math.round(exp.a1)) <= 1, A[0] + " vs " + exp.a1);
 ok("vaste lasten verschil jan", Math.abs(num(D[0]) - Math.round(exp.d1)) <= 1, D[0]);
+ok("geen opgeteld resultaat meer", (await rowCells("Vaste lasten", "Resultaat")) === null);
 ok(
-  "vaste lasten jaar resultaat",
-  Math.abs(num(R[R.length - 1]) - Math.round(exp.dy)) <= 1,
-  R[R.length - 1] + " vs " + exp.dy.toFixed(0),
+  "verschil feb staat op zichzelf (niet opgeteld)",
+  num(D[1]) === num(D[0]) && D.length === 14,
+  D.slice(0, 3).join(" ") + " / " + D.length,
 );
+ok(
+  "totaal t/m sep = optelling",
+  Math.abs(num(D[12]) - Math.round(exp.dy)) <= 1 && B[12] === "12.600",
+  D[12] + " vs " + exp.dy.toFixed(0) + ", budget " + B[12],
+);
+ok("heel jaar: verwacht budget", B[13] === "16.800" && A[13] === "" && D[13] === "", B[13] + "|" + A[13] + "|" + D[13]);
+const heads = await p.locator(".bgrid.cmp").first().locator("thead th.yr").allInnerTexts();
+ok("totaalkolommen", heads.join() === "t/m sep,Heel jaar", heads.join());
 // De verschillen per post tellen op tot het verschil van de hoofdcategorie.
 const subD = [];
 for (const c of ["Wonen", "Energie en water", "Verzekeringen", "Abonnementen"])
   subD.push(await rowCells(c, "Verschil"));
 ok(
   "posten: één regel met alle maanden en jaar",
-  subD.every(r => r && r.length === 13),
+  subD.every(r => r && r.length === 14),
   subD.map(r => r?.length).join(),
 );
 ok(
@@ -132,6 +140,30 @@ ok(
   subD.map(r => r[0]).join(" ") + " vs " + D[0],
 );
 await p.screenshot({ path: SP + "/cmp3.png" });
+// Kwartaalfilter
+await p.click(".qseg >> text=Q2");
+const q2 = await p.locator(".bgrid.cmp").first().locator("thead th").allInnerTexts();
+ok("Q2: alleen apr–jun en totaal", q2.slice(2).join() === "Apr,Mei,Jun,Q2", q2.join());
+const q2B = await rowCells("Vaste lasten", "Budget"),
+  q2D = await rowCells("Vaste lasten", "Verschil");
+ok(
+  "Q2 totaal = som van 3 maanden",
+  q2B[3] === "4.200" && num(q2D[3]) === num(q2D[0]) * 3,
+  q2B[3] + " " + q2D.join(" "),
+);
+await p.click(".qseg >> text=Q4");
+const q4 = await p.locator(".bgrid.cmp").first().locator("thead th").allInnerTexts();
+const q4B = await rowCells("Vaste lasten", "Budget"),
+  q4A = await rowCells("Vaste lasten", "Werkelijk");
+ok(
+  "Q4 zonder transacties: verwacht budget, werkelijk leeg",
+  q4.slice(2).join() === "Okt,Nov,Dec,Q4" && q4B[3] === "4.200" && q4A[3] === "·",
+  q4.join() + " " + q4B[3] + " " + q4A[3],
+);
+await p.screenshot({ path: SP + "/cmp-q4.png" });
+await p.goBack();
+ok("terug: weer Q2", (await p.locator(".qseg [aria-pressed=true]").innerText()) === "Q2");
+await p.click(".qseg >> text=Jaar");
 await p.evaluate(() => {
   let cur = "";
   for (const tr of document.querySelectorAll(".bgrid.cmp tbody tr")) {

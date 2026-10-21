@@ -13,6 +13,7 @@ function viewState(n) {
     fCat: S.fCat,
     fUnk: S.fUnk,
     fText: S.fText,
+    cmpQ: S.cmpQ || 0,
     scroll: 0,
   };
 }
@@ -22,6 +23,7 @@ function restoreView(st) {
     fCat: st.fCat || "",
     fUnk: !!st.fUnk,
     fText: st.fText || "",
+    cmpQ: st.cmpQ || 0,
     shown: 50,
     ruleFor: null,
   });

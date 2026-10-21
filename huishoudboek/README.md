@@ -68,18 +68,22 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
 - Bij *Heel jaar* vergelijkt de app met het budget van de maanden waarover je
   transacties hebt ingelezen.
 - **Vergelijk per maand:** één tabel per hoofdcategorie (Inkomsten, Vaste
-  lasten, Variabele uitgaven, Reserveringen, Sparen en beleggen) met alle
-  maanden als kolommen en een jaarkolom; alleen om te bekijken. Per
-  hoofdcategorie vier regels: *Budget*, *Werkelijk*, *Verschil* (groen is
-  gunstig) en *Resultaat* (het opgebouwde verschil tot en met die maand).
+  lasten, Variabele uitgaven, Reserveringen, Sparen en beleggen) met de
+  maanden als kolommen; alleen om te bekijken. Kies bovenaan het hele jaar
+  of een kwartaal (Q1–Q4). Per hoofdcategorie drie regels: *Budget*,
+  *Werkelijk* en *Verschil* (per maand, niet opgeteld; groen is gunstig).
   Daaronder de losse posten (Wonen, Boodschappen, …) met alleen hun
-  *Verschil*; tik erop voor de transacties van die post.
+  *Verschil*. De totaalkolom telt de maanden met ingelezen transacties op
+  (bijv. *t/m sep*); zolang er nog maanden zonder transacties zijn, staat
+  ernaast het budget voor de hele periode (*Heel jaar* of *Heel Q4*): wat
+  je aan het begin verwachtte. Maanden zonder transacties worden niet
+  vergeleken (·).
   Daaronder **Inkomsten vs uitgaven per maand**: inkomsten verwacht en
-  werkelijk, uitgaven en sparen (los van elkaar) begroot en werkelijk, en wat er over is
-  (verwacht en werkelijk). Maanden zonder ingelezen transacties worden niet
-  vergeleken (·); de jaarkolom telt alleen de maanden met transacties. Tik
-  op een werkelijk bedrag voor alle transacties van die hoofdcategorie in die
-  maand (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste lasten*).
+  werkelijk, uitgaven en sparen (los van elkaar) begroot en werkelijk, en
+  wat er over is (verwacht en werkelijk), met dezelfde periode en totalen.
+  Tik op een bedrag voor de transacties van die categorie of post in die
+  maand (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste
+  lasten*).
 
 ## Regels laten maken door een AI-chat
 

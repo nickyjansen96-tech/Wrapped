@@ -1,9 +1,9 @@
 "use strict";
-// Budget vs werkelijk per hoofdcategorie en maand.
-/* budget vs werkelijk: dezelfde tabel als het budget, maar alleen om te bekijken */
-// Eén tabel: per categorie vier regels (budget, werkelijk, verschil, resultaat) met de maanden als kolommen.
-// Verschil is gunstig (+) als je minder uitgaf of meer ontving/spaarde dan begroot. Resultaat is het opgebouwde
-// verschil tot en met die maand. Maanden zonder ingelezen transacties worden niet vergeleken (·).
+// Budget vs werkelijk per hoofdcategorie en maand, voor het hele jaar of één kwartaal.
+// Per hoofdcategorie drie regels (budget, werkelijk, verschil), per post daaronder alleen het verschil.
+// Verschil is gunstig (+) als je minder uitgaf of meer ontving/spaarde dan begroot; elke maand staat op zichzelf.
+// De totaalkolom telt de maanden met ingelezen transacties op. Zijn er nog maanden zonder transacties, dan staat
+// ernaast het budget voor de hele periode: wat je aan het begin van het jaar verwachtte.
 const fmtCell = (v, signed) => {
   const n = eur0.format(Math.abs(v)).replace("€", "").trim();
   return signed ? (v > 0.5 ? "+" : v < -0.5 ? "−" : "") + n : (v < -0.5 ? "−" : "") + n;
@@ -12,79 +12,65 @@ function goCompare() {
   S.tab = "vergelijk";
   go();
 }
+// Maanden in de gekozen periode (0 = heel jaar, 1–4 = kwartaal) en welke daarvan transacties hebben.
+function cmpPeriod(has) {
+  const Q = S.cmpQ || 0,
+    ks = Q ? [3 * Q - 2, 3 * Q - 1, 3 * Q] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    on = ks.filter(has),
+    name = Q ? "Q" + Q : "Jaar";
+  const partial = on.length > 0 && on.length < ks.length;
+  return {
+    Q,
+    ks,
+    on,
+    partial,
+    totLabel: partial ? "t/m " + MONTHS[on[on.length - 1] - 1].toLowerCase() : name,
+    fullLabel: Q ? "Heel Q" + Q : "Heel jaar",
+  };
+}
+function quarterSwitch() {
+  return el(
+    "div",
+    { class: "yearseg qseg", role: "group", "aria-label": "Periode" },
+    ["Jaar", "Q1", "Q2", "Q3", "Q4"].map((t, q) =>
+      el(
+        "button",
+        {
+          class: "seg",
+          "aria-pressed": (S.cmpQ || 0) === q,
+          onclick: () => {
+            if ((S.cmpQ || 0) !== q) {
+              S.cmpQ = q;
+              go();
+            }
+          },
+        },
+        t,
+      ),
+    ),
+  );
+}
+// Eén cel; c = { v, show, signed, go, blank }.
+function cmpTd(c, tip, cls) {
+  const tone = (c.signed || c.tone) && c.show ? (c.v > 0.5 ? " pos" : c.v < -0.5 ? " neg" : " even") : "";
+  const txt = c.show ? fmtCell(c.v, !!c.signed) : c.blank ? "" : "·";
+  const t = tip + " " + (c.show ? eur0.format(c.v) : "nog geen gegevens");
+  return el(
+    "td",
+    { class: "c" + tone + (cls ? " " + cls : "") + (c.show ? "" : " empty") },
+    c.go && c.show
+      ? el("button", { title: t + " — tik voor de transacties", "aria-label": t, onclick: c.go }, txt)
+      : el("span", { title: t }, txt),
+  );
+}
 function viewCompare(main) {
   const Y = S.year,
     { T, cnt, unkN } = totals(Y);
-  let from = 0,
-    upto = 0;
-  for (let k = 1; k <= 12; k++)
-    if (cnt[k]) {
-      if (!from) from = k;
-      upto = k;
-    }
   const has = k => cnt[k] > 0;
-  const last = 12,
-    MS = MONTHS;
+  const P = cmpPeriod(has);
   const net = Array(13).fill(0);
   for (const t of S.tx) if (Math.floor(t.d / 10000) === Y) net[Math.floor(t.d / 100) % 100] += t.a;
-  const KINDS = ["Budget", "Werkelijk", "Verschil", "Resultaat"];
-  // a(k)/b(k): werkelijk en budget in maand k; good: +1 als meer werkelijk gunstig is (inkomsten, sparen), −1 bij uitgaven.
-  const block = (label, a, b, good, toTx, cls) => {
-    const rows = KINDS.map(() => []);
-    let cum = 0,
-      sa = 0,
-      sb = 0;
-    for (let k = 1; k <= last; k++) {
-      const B = b(k),
-        on = has(k),
-        A = on ? a(k) : 0,
-        d = good * (A - B);
-      if (on) {
-        cum += d;
-        sa += A;
-        sb += B;
-      }
-      rows[0].push({ v: B, show: B >= 0.5 || (on && Math.abs(A) >= 0.5) });
-      rows[1].push({ v: A, show: on, go: toTx && toTx(k) });
-      rows[2].push({ v: d, show: on, signed: true });
-      rows[3].push({ v: cum, show: on, signed: true, res: true });
-    }
-    const dy = good * (sa - sb),
-      any = !!upto;
-    rows[0].push({ v: sb, show: any });
-    rows[1].push({ v: sa, show: any, go: toTx && toTx(0) });
-    rows[2].push({ v: dy, show: any, signed: true });
-    rows[3].push({ v: dy, show: any, signed: true, res: true });
-    return rows.map((cells, ri) =>
-      el(
-        "tr",
-        { class: "k" + ri + (ri === 0 ? " first" : "") + (cls ? " " + cls : "") },
-        ri === 0 ? el("th", { class: "cat", rowspan: 4, scope: "rowgroup" }, label) : null,
-        el("th", { class: "kind", scope: "row" }, KINDS[ri]),
-        ...cells.map((c, j) => {
-          const yr = j === last,
-            tone = c.signed && c.show ? (c.v > 0.5 ? " pos" : c.v < -0.5 ? " neg" : " even") : "";
-          const txt = c.show ? fmtCell(c.v, !!c.signed) : ri > 0 && !yr ? "·" : "";
-          const tip =
-            label +
-            ", " +
-            (yr ? "jaar" : MONTHS_LONG[j]) +
-            ": " +
-            KINDS[ri].toLowerCase() +
-            " " +
-            (c.show ? eur0.format(c.v) : "nog geen gegevens");
-          return el(
-            "td",
-            { class: "c" + tone + (yr ? " yr" : "") + (c.show ? "" : " empty") },
-            c.go && c.show
-              ? el("button", { title: tip + " — tik voor de transacties", "aria-label": tip, onclick: c.go }, txt)
-              : el("span", { title: tip }, txt),
-          );
-        }),
-      ),
-    );
-  };
-  // Per hoofdcategorie (Inkomsten, Vaste lasten, …) vier regels; per post daaronder alleen het verschil.
+  const KINDS = ["Budget", "Werkelijk", "Verschil"];
   const toTx = f => k => () => {
     S.tab = "transacties";
     S.fCat = f;
@@ -93,59 +79,77 @@ function viewCompare(main) {
     S.shown = 50;
     go();
   };
-  const body = [];
-  GROUPS.forEach(grp => {
-    const good = grp.kind === "uit" ? -1 : 1;
-    if (!grp.cats.some(c => budgetOf(Y, c, 0) >= 0.5 || (T[c] || []).some(v => Math.abs(v) >= 0.5))) return;
-    body.push(
-      ...block(
-        grp.name,
-        k => grp.cats.reduce((s, c) => s + actual(grp, (T[c] || [])[k] || 0), 0),
-        k => grp.cats.reduce((s, c) => s + budgetOf(Y, c, k), 0),
-        good,
-        toTx("grp:" + grp.name),
+  // Cellen voor één regel: maanden, totaal (opgeteld over maanden met transacties) en eventueel het hele budget.
+  const cellsOf = (f, opt) => {
+    const cells = P.ks.map(k => ({ v: f(k), show: opt.always || has(k), signed: opt.signed, go: opt.go && opt.go(k) }));
+    const sum = P.on.reduce((s, k) => s + f(k), 0);
+    const totShow = P.on.length > 0 || opt.always;
+    cells.push({
+      v: P.on.length ? sum : P.ks.reduce((s, k) => s + f(k), 0),
+      show: totShow,
+      signed: opt.signed,
+      go: opt.go && !P.Q && opt.go(0),
+      tot: true,
+    });
+    if (P.partial)
+      cells.push(
+        opt.always ? { v: P.ks.reduce((s, k) => s + f(k), 0), show: true, full: true } : { blank: true, full: true },
+      );
+    return cells;
+  };
+  const tds = (cells, tip) =>
+    cells.map((c, j) =>
+      cmpTd(
+        c,
+        tip + ", " + (c.full ? P.fullLabel.toLowerCase() : c.tot ? P.totLabel : MONTHS_LONG[P.ks[j] - 1]) + ":",
+        c.full ? "yr full" : c.tot ? "yr" : "",
       ),
     );
-    // Daaronder per post alleen het verschil met het budget.
-    const subs = grp.cats.filter(c => budgetOf(Y, c, 0) >= 0.5 || (T[c] || []).some(v => Math.abs(v) >= 0.5));
-    subs.forEach((c, i) => body.push(subRow(c, grp, i === subs.length - 1)));
-  });
-  function subRow(c, grp, lastSub) {
-    const good = grp.kind === "uit" ? -1 : 1,
-      A = k => actual(grp, (T[c] || [])[k] || 0),
-      B = k => budgetOf(Y, c, k);
-    let dy = 0;
-    const cells = [];
-    for (let k = 1; k <= last; k++) {
-      const d = good * (A(k) - B(k));
-      if (has(k)) dy += d;
-      cells.push({ v: d, show: has(k), k });
-    }
-    cells.push({ v: dy, show: !!upto, k: 0 });
+  // a(k)/b(k): werkelijk en budget in maand k; good: +1 als meer werkelijk gunstig is (inkomsten, sparen), −1 bij uitgaven.
+  const block = (label, a, b, good, go2) => {
+    const rows = [
+      cellsOf(b, { always: true }),
+      cellsOf(a, { go: go2 }),
+      cellsOf(k => good * (a(k) - b(k)), { signed: true }),
+    ];
+    return rows.map((cells, ri) =>
+      el(
+        "tr",
+        { class: "k" + ri + (ri === 0 ? " first" : "") },
+        ri === 0 ? el("th", { class: "cat", rowspan: 3, scope: "rowgroup" }, label) : null,
+        el("th", { class: "kind", scope: "row" }, KINDS[ri]),
+        ...tds(cells, label + " " + KINDS[ri].toLowerCase()),
+      ),
+    );
+  };
+  const subRow = (c, grp, lastSub) => {
+    const good = grp.kind === "uit" ? -1 : 1;
+    const d = k => good * (actual(grp, (T[c] || [])[k] || 0) - budgetOf(Y, c, k));
     return el(
       "tr",
       { class: "sub" + (lastSub ? " sublast" : "") },
       el("th", { class: "cat", scope: "row", title: c }, c),
       el("th", { class: "kind" }, "Verschil"),
-      ...cells.map(({ v, show, k }) => {
-        const tone = show ? (v > 0.5 ? " pos" : v < -0.5 ? " neg" : " even") : "",
-          txt = show ? fmtCell(v, true) : k ? "·" : "",
-          tip =
-            c +
-            ", " +
-            (k ? MONTHS_LONG[k - 1] : "jaar") +
-            ": verschil " +
-            (show ? eur0.format(v) : "nog geen gegevens");
-        return el(
-          "td",
-          { class: "c" + tone + (k ? "" : " yr") + (show ? "" : " empty") },
-          show
-            ? el("button", { title: tip + " — tik voor de transacties", "aria-label": tip, onclick: toTx(c)(k) }, txt)
-            : el("span", { title: tip }, txt),
-        );
-      }),
+      ...tds(cellsOf(d, { signed: true, go: toTx(c) }), c + " verschil"),
     );
-  }
+  };
+  const used = c => budgetOf(Y, c, 0) >= 0.5 || (T[c] || []).some(v => Math.abs(v) >= 0.5);
+  const body = [];
+  GROUPS.forEach(grp => {
+    if (!grp.cats.some(used)) return;
+    body.push(
+      ...block(
+        grp.name,
+        k => grp.cats.reduce((s, c) => s + actual(grp, (T[c] || [])[k] || 0), 0),
+        k => grp.cats.reduce((s, c) => s + budgetOf(Y, c, k), 0),
+        grp.kind === "uit" ? -1 : 1,
+        toTx("grp:" + grp.name),
+      ),
+    );
+    // Daaronder per post alleen het verschil met het budget.
+    const subs = grp.cats.filter(used);
+    subs.forEach((c, i) => body.push(subRow(c, grp, i === subs.length - 1)));
+  });
   main.append(
     el(
       "div",
@@ -157,8 +161,8 @@ function viewCompare(main) {
         el(
           "div",
           { class: "of" },
-          "Per post staat alleen het verschil. Resultaat = opgebouwd verschil. Groen is gunstig. Tik op een bedrag voor de transacties." +
-            (upto && upto < 12 ? " · = nog geen transacties ingelezen." : ""),
+          "Verschil per maand; groen is gunstig. Per post staat alleen het verschil. Tik op een bedrag voor de transacties." +
+            (P.partial ? " · = nog geen transacties ingelezen." : ""),
         ),
       ),
       el(
@@ -174,28 +178,20 @@ function viewCompare(main) {
         "Budget bewerken",
       ),
     ),
+    quarterSwitch(),
   );
   if (!body.length) {
     main.append(el("div", { class: "empty" }, "Nog geen budget of transacties in " + Y + "."));
     return;
   }
-  const yrLabel = upto && (from > 1 || upto < 12) ? "t/m " + MONTHS[upto - 1].toLowerCase() : "Jaar";
-  const head = el(
-    "tr",
-    {},
-    el("th", { class: "cat" }, ""),
-    el("th", { class: "kind" }, ""),
-    ...MS.map((m, j) => el("th", { class: has(j + 1) ? "" : "nodata" }, m)),
-    el("th", { class: "yr" }, yrLabel),
-  );
   main.append(
     el(
       "div",
       { class: "bgridwrap" },
-      el("table", { class: "bgrid cmp" }, el("thead", {}, head), el("tbody", {}, ...body)),
+      el("table", { class: "bgrid cmp" }, el("thead", {}, cmpHead(P, has)), el("tbody", {}, ...body)),
     ),
   );
-  main.append(incomeVsSpending(Y, has, from, upto, net, toTx));
+  main.append(incomeVsSpending(Y, has, P, net, toTx, cellsOf, tds));
   if (unkN[0])
     main.append(
       el(
@@ -206,19 +202,25 @@ function viewCompare(main) {
       ),
     );
 }
+function cmpHead(P, has) {
+  return el(
+    "tr",
+    {},
+    el("th", { class: "cat" }, ""),
+    el("th", { class: "kind" }, ""),
+    ...P.ks.map(k => el("th", { class: has(k) ? "" : "nodata" }, MONTHS[k - 1])),
+    el("th", { class: "yr" }, P.totLabel),
+    P.partial ? el("th", { class: "yr full" }, P.fullLabel) : null,
+  );
+}
 
 // Onderaan: verwachte en werkelijke inkomsten, uitgaven en sparen, en wat er overblijft, per maand.
-// De jaarkolom telt (net als de tabel erboven) alleen de maanden met ingelezen transacties.
-function incomeVsSpending(Y, has, from, upto, net, toTx) {
+// De totaalkolom telt (net als de tabel erboven) alleen de maanden met ingelezen transacties.
+function incomeVsSpending(Y, has, P, net, toTx, cellsOf, tds) {
   const { T } = totals(Y);
   const incAct = k => GROUPS[0].cats.reduce((s, c) => s + ((T[c] || [])[k] || 0), 0);
   const spAct = k => GROUPS[4].cats.reduce((s, c) => s - ((T[c] || [])[k] || 0), 0);
   const uitAct = k => incAct(k) - net[k] - spAct(k); // alles behalve inkomsten en sparen, ook zonder categorie
-  const yearOf = f => {
-    let s = 0;
-    for (let k = from; k <= upto; k++) s += f(k);
-    return s;
-  };
   const rows = [
     ["Inkomsten", "Verwacht", k => incOf(Y, k), false],
     ["Inkomsten", "Werkelijk", incAct, true, toTx("grp:Inkomsten")],
@@ -229,29 +231,17 @@ function incomeVsSpending(Y, has, from, upto, net, toTx) {
     ["Over", "Verwacht", k => overOf(Y, k), false, null, true],
     ["Over", "Werkelijk", k => net[k], true, null, true],
   ];
-  const tr = rows.map(([label, kind, f, actual, go2, tone], ri) =>
-    el(
+  const tr = rows.map(([label, kind, f, isActual, go2, tone], ri) => {
+    const cells = cellsOf(f, { always: !isActual, go: go2 });
+    if (tone) cells.forEach(c => (c.tone = true));
+    return el(
       "tr",
       { class: "k" + (ri % 2 ? 1 : 0) + (ri % 2 ? "" : " first") + (label === "Over" ? " over" : "") },
       ri % 2 ? null : el("th", { class: "cat", rowspan: 2, scope: "rowgroup" }, label),
       el("th", { class: "kind", scope: "row" }, kind),
-      ...MONTHS.map((m, j) => {
-        const k = j + 1,
-          show = !actual || has(k),
-          v = show ? f(k) : 0;
-        return sumTd(v, show, tone, go2 && go2(k), label + ", " + MONTHS_LONG[j] + ": " + kind.toLowerCase());
-      }),
-      sumTd(upto ? yearOf(f) : 0, !!upto, tone, go2 && go2(0), label + ", " + Y + ": " + kind.toLowerCase(), true),
-    ),
-  );
-  const head = el(
-    "tr",
-    {},
-    el("th", { class: "cat" }, ""),
-    el("th", { class: "kind" }, ""),
-    ...MONTHS.map((m, j) => el("th", { class: has(j + 1) ? "" : "nodata" }, m)),
-    el("th", { class: "yr" }, upto && (from > 1 || upto < 12) ? "t/m " + MONTHS[upto - 1].toLowerCase() : "Jaar"),
-  );
+      ...tds(cells, label + " " + kind.toLowerCase()),
+    );
+  });
   return el(
     "section",
     { class: "ivu" },
@@ -259,18 +249,7 @@ function incomeVsSpending(Y, has, from, upto, net, toTx) {
     el(
       "div",
       { class: "bgridwrap" },
-      el("table", { class: "bgrid cmp" }, el("thead", {}, head), el("tbody", {}, ...tr)),
+      el("table", { class: "bgrid cmp" }, el("thead", {}, cmpHead(P, has)), el("tbody", {}, ...tr)),
     ),
-  );
-}
-function sumTd(v, show, tone, go2, tip, yr) {
-  const t = show && tone ? (v > 0.5 ? " pos" : v < -0.5 ? " neg" : " even") : "";
-  const txt = show ? fmtCell(v, false) : "·";
-  return el(
-    "td",
-    { class: "c" + t + (yr ? " yr" : "") + (show ? "" : " empty") },
-    go2 && show
-      ? el("button", { title: tip + " — tik voor de transacties", "aria-label": tip, onclick: go2 }, txt)
-      : el("span", { title: tip }, txt),
   );
 }
