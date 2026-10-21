@@ -2009,3 +2009,44 @@ a.btn {
     white-space: nowrap;
   }
 }
+/* budget vs werkelijk: per blok de posten en het totaal, alleen het verschil */
+.bgrid.cmp.diff th.cat {
+  width: 12rem;
+  min-width: 12rem;
+  max-width: 12rem;
+  border-right: 0.5px solid var(--line);
+}
+.bgrid.cmp.diff tr.grphead th.cat {
+  padding-top: 10px;
+  padding-bottom: 2px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.bgrid.cmp.diff tr.grphead th,
+.bgrid.cmp.diff tr.grphead td {
+  border-top: 1px solid var(--line);
+}
+.bgrid.cmp.diff tr.grphead td.c {
+  border-left: 0;
+}
+.bgrid.cmp.diff tr.total th.cat {
+  font-weight: 700;
+  font-size: 12.5px;
+  vertical-align: middle;
+  padding: 0 8px 0 12px;
+}
+.bgrid.cmp.diff tr.total td.c {
+  font-weight: 700;
+}
+.bgrid.cmp.diff tr.total th,
+.bgrid.cmp.diff tr.total td {
+  border-top: 0.5px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 640px) {
+  .bgrid.cmp.diff th.cat {
+    width: 8.5rem;
+    min-width: 8.5rem;
+    max-width: 8.5rem;
+  }
+}

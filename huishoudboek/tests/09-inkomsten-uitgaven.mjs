@@ -50,7 +50,7 @@ await p.evaluate(() => {
 const heads = await p.locator(".bgrid.cmp").first().locator("thead th").allInnerTexts();
 ok(
   "alle maanden jan–dec zichtbaar",
-  heads.slice(2, 14).join(",") === "Jan,Feb,Mrt,Apr,Mei,Jun,Jul,Aug,Sep,Okt,Nov,Dec",
+  heads.slice(1, 13).join(",") === "Jan,Feb,Mrt,Apr,Mei,Jun,Jul,Aug,Sep,Okt,Nov,Dec",
   heads.join(","),
 );
 ok("geen knop meer om maanden te verbergen", (await p.locator("text=Toon ook").count()) === 0);

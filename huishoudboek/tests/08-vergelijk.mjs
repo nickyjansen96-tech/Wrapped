@@ -48,50 +48,40 @@ await p.click("#tabs [data-tab=overzicht]");
 await p.click("#rail .yearseg >> text=2026");
 await p.click("#compare-btn");
 const labels = await p.evaluate(() =>
-  [...document.querySelectorAll(".bgrid.cmp tbody th.cat")].map(e => e.textContent),
+  [...document.querySelectorAll(".bgrid.cmp.diff tbody th.cat")].map(e => e.textContent),
 );
 ok(
-  "hoofdcategorieën met posten, daaronder inkomsten vs uitgaven",
+  "per blok: kop, posten en totaal",
   JSON.stringify(labels) ===
     JSON.stringify([
       "Inkomsten",
       "Salaris of uitkering",
+      "Inkomsten totaal",
       "Vaste lasten",
       "Wonen",
       "Energie en water",
       "Verzekeringen",
       "Abonnementen",
+      "Vaste lasten totaal",
       "Variabele uitgaven",
       "Boodschappen",
       "Brandstof, parkeren en OV",
+      "Variabele uitgaven totaal",
       "Sparen en beleggen",
       "Buffer",
-      "Inkomsten",
-      "Uitgaven",
-      "Sparen",
-      "Over",
+      "Sparen en beleggen totaal",
     ]),
   labels.join(", "),
 );
-const subKinds = await p.evaluate(() =>
-  [...document.querySelectorAll(".bgrid.cmp tr.sub")].map(tr => tr.querySelector("th.kind").textContent),
-);
-ok("posten tonen alleen het verschil", subKinds.length > 0 && subKinds.every(k => k === "Verschil"), subKinds.join());
-const rowCells = async (cat, kind) =>
-  p.evaluate(
-    ([cat, kind]) => {
-      let cur = "";
-      for (const tr of document.querySelectorAll(".bgrid.cmp tbody tr")) {
-        const c = tr.querySelector("th.cat");
-        if (c) cur = c.textContent;
-        const k = tr.querySelector("th.kind");
-        if (cur === cat && k && k.textContent === kind)
-          return [...tr.querySelectorAll("td.c")].map(td => td.textContent);
-      }
-      return null;
-    },
-    [cat, kind],
-  );
+ok("alleen verschillen, geen budget- of werkelijk-regels", (await p.locator(".bgrid.cmp.diff th.kind").count()) === 0);
+// Cellen van een regel in de bovenste tabel.
+const rowCells = label =>
+  p.evaluate(label => {
+    for (const tr of document.querySelectorAll(".bgrid.cmp.diff tbody tr"))
+      if (tr.querySelector("th.cat")?.textContent === label)
+        return [...tr.querySelectorAll("td.c")].map(td => td.textContent);
+    return null;
+  }, label);
 const num = s =>
   Number(
     s
@@ -103,83 +93,64 @@ const exp = await p.evaluate(() => {
   const { T } = totals(2026);
   const g = ["Wonen", "Energie en water", "Verzekeringen", "Abonnementen"];
   const a = k => -g.reduce((s, c) => s + ((T[c] || [])[k] || 0), 0);
-  return { b: 1400, a1: a(1), d1: 1400 - a(1), ay: a(0), dy: 1400 * 9 - a(0) };
+  return { d1: 1400 - a(1), dy: 1400 * 9 - a(0) };
 });
-const B = await rowCells("Vaste lasten", "Budget"),
-  A = await rowCells("Vaste lasten", "Werkelijk"),
-  D = await rowCells("Vaste lasten", "Verschil");
-ok("vaste lasten budget = som posten", B[0] === "1.400", B[0]);
-ok("vaste lasten werkelijk jan", Math.abs(num(A[0]) - Math.round(exp.a1)) <= 1, A[0] + " vs " + exp.a1);
-ok("vaste lasten verschil jan", Math.abs(num(D[0]) - Math.round(exp.d1)) <= 1, D[0]);
-ok("geen opgeteld resultaat meer", (await rowCells("Vaste lasten", "Resultaat")) === null);
+const D = await rowCells("Vaste lasten totaal");
+ok("vaste lasten totaal verschil jan", Math.abs(num(D[0]) - Math.round(exp.d1)) <= 1, D[0]);
 ok(
   "verschil feb staat op zichzelf (niet opgeteld)",
-  num(D[1]) === num(D[0]) && D.length === 14,
+  num(D[1]) === num(D[0]) && D.length === 13,
   D.slice(0, 3).join(" ") + " / " + D.length,
 );
-ok(
-  "totaal t/m sep = optelling",
-  Math.abs(num(D[12]) - Math.round(exp.dy)) <= 1 && B[12] === "12.600",
-  D[12] + " vs " + exp.dy.toFixed(0) + ", budget " + B[12],
-);
-ok("heel jaar: verwacht budget", B[13] === "16.800" && A[13] === "" && D[13] === "", B[13] + "|" + A[13] + "|" + D[13]);
-const heads = await p.locator(".bgrid.cmp").first().locator("thead th.yr").allInnerTexts();
-ok("totaalkolommen", heads.join() === "t/m sep,Heel jaar", heads.join());
-// De verschillen per post tellen op tot het verschil van de hoofdcategorie.
+ok("totaal t/m sep = optelling", Math.abs(num(D[12]) - Math.round(exp.dy)) <= 1, D[12] + " vs " + exp.dy.toFixed(0));
+const heads = await p.locator(".bgrid.cmp.diff thead th.yr").allInnerTexts();
+ok("één totaalkolom", heads.join() === "t/m sep", heads.join());
+ok("kop zonder bedragen", (await rowCells("Vaste lasten")).join("") === "");
+// De verschillen per post tellen op tot het totaal van de hoofdcategorie.
 const subD = [];
-for (const c of ["Wonen", "Energie en water", "Verzekeringen", "Abonnementen"])
-  subD.push(await rowCells(c, "Verschil"));
+for (const c of ["Wonen", "Energie en water", "Verzekeringen", "Abonnementen"]) subD.push(await rowCells(c));
 ok(
-  "posten: één regel met alle maanden en jaar",
-  subD.every(r => r && r.length === 14),
-  subD.map(r => r?.length).join(),
-);
-ok(
-  "som verschil posten = verschil vaste lasten",
+  "som verschil posten = totaal vaste lasten",
   [0, 12].every(j => Math.abs(subD.reduce((s, r) => s + num(r[j]), 0) - num(D[j])) <= 2),
   subD.map(r => r[0]).join(" ") + " vs " + D[0],
+);
+ok(
+  "heel jaar met verwacht budget staat in de tabel eronder",
+  (await p.locator(".ivu thead th.full").innerText()) === "Heel jaar",
 );
 await p.screenshot({ path: SP + "/cmp3.png" });
 // Kwartaalfilter
 await p.click(".qseg >> text=Q2");
-const q2 = await p.locator(".bgrid.cmp").first().locator("thead th").allInnerTexts();
-ok("Q2: alleen apr–jun en totaal", q2.slice(2).join() === "Apr,Mei,Jun,Q2", q2.join());
-const q2B = await rowCells("Vaste lasten", "Budget"),
-  q2D = await rowCells("Vaste lasten", "Verschil");
-ok(
-  "Q2 totaal = som van 3 maanden",
-  q2B[3] === "4.200" && num(q2D[3]) === num(q2D[0]) * 3,
-  q2B[3] + " " + q2D.join(" "),
-);
+const q2 = await p.locator(".bgrid.cmp.diff thead th").allInnerTexts();
+ok("Q2: alleen apr–jun en totaal", q2.slice(1).join() === "Apr,Mei,Jun,Q2", q2.join());
+const q2D = await rowCells("Vaste lasten totaal");
+ok("Q2 totaal = som van 3 maanden", num(q2D[3]) === num(q2D[0]) * 3, q2D.join(" "));
 await p.click(".qseg >> text=Q4");
-const q4 = await p.locator(".bgrid.cmp").first().locator("thead th").allInnerTexts();
-const q4B = await rowCells("Vaste lasten", "Budget"),
-  q4A = await rowCells("Vaste lasten", "Werkelijk");
+const q4D = await rowCells("Vaste lasten totaal");
 ok(
-  "Q4 zonder transacties: verwacht budget, werkelijk leeg",
-  q4.slice(2).join() === "Okt,Nov,Dec,Q4" && q4B[3] === "4.200" && q4A[3] === "·",
-  q4.join() + " " + q4B[3] + " " + q4A[3],
+  "Q4 zonder transacties: leeg (·)",
+  q4D.slice(0, 3).every(v => v === "·"),
+  q4D.join(" "),
 );
 await p.screenshot({ path: SP + "/cmp-q4.png" });
 await p.goBack();
 ok("terug: weer Q2", (await p.locator(".qseg [aria-pressed=true]").innerText()) === "Q2");
 await p.click(".qseg >> text=Jaar");
 await p.evaluate(() => {
-  let cur = "";
-  for (const tr of document.querySelectorAll(".bgrid.cmp tbody tr")) {
-    const c = tr.querySelector("th.cat");
-    if (c) cur = c.textContent;
-    const k = tr.querySelector("th.kind");
-    if (cur === "Vaste lasten" && k.textContent === "Werkelijk") {
-      tr.querySelector("td.c button").click();
-      return;
-    }
-  }
+  for (const tr of document.querySelectorAll(".bgrid.cmp.diff tbody tr"))
+    if (tr.querySelector("th.cat").textContent === "Vaste lasten totaal")
+      return tr.querySelector("td.c button").click();
 });
 const n = await p.locator(".tx").count();
 const sel = await p.locator("#fcat").inputValue();
-ok("klik → transacties alle vaste lasten jan", sel === "grp:Vaste lasten" && n === 4, sel + " / " + n);
+ok("klik totaal → transacties alle vaste lasten jan", sel === "grp:Vaste lasten" && n === 4, sel + " / " + n);
 ok('filter toont "Alle vaste lasten"', (await p.locator("#fcat option:checked").innerText()) === "Alle vaste lasten");
+await p.click("#back");
+await p.evaluate(() => {
+  for (const tr of document.querySelectorAll(".bgrid.cmp.diff tbody tr"))
+    if (tr.querySelector("th.cat").textContent === "Wonen") return tr.querySelector("td.c button").click();
+});
+ok("klik post → transacties van die post", (await p.locator("#fcat").inputValue()) === "Wonen");
 await p.setViewportSize({ width: 375, height: 667 });
 await p.click("#back");
 await p.waitForTimeout(100);

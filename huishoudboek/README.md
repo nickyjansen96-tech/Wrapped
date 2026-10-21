@@ -67,20 +67,19 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   met je gemiddelde, budget van vorig jaar overnemen, wissen.
 - Bij *Heel jaar* vergelijkt de app met het budget van de maanden waarover je
   transacties hebt ingelezen.
-- **Vergelijk per maand:** één tabel per hoofdcategorie (Inkomsten, Vaste
-  lasten, Variabele uitgaven, Reserveringen, Sparen en beleggen) met de
-  maanden als kolommen; alleen om te bekijken. Kies bovenaan het hele jaar
-  of een kwartaal (Q1–Q4). Per hoofdcategorie drie regels: *Budget*,
-  *Werkelijk* en *Verschil* (per maand, niet opgeteld; groen is gunstig).
-  Daaronder de losse posten (Wonen, Boodschappen, …) met alleen hun
-  *Verschil*. De totaalkolom telt de maanden met ingelezen transacties op
-  (bijv. *t/m sep*); zolang er nog maanden zonder transacties zijn, staat
-  ernaast het budget voor de hele periode (*Heel jaar* of *Heel Q4*): wat
-  je aan het begin verwachtte. Maanden zonder transacties worden niet
-  vergeleken (·).
+- **Vergelijk per maand:** per hoofdcategorie (Inkomsten, Vaste lasten,
+  Variabele uitgaven, Reserveringen, Sparen en beleggen) een blok met per
+  post (Wonen, Boodschappen, …) het verschil met het budget en daaronder
+  het totale verschil van de categorie, met de maanden als kolommen; alleen
+  om te bekijken. Elke maand staat op zichzelf; groen is gunstig. Kies
+  bovenaan het hele jaar of een kwartaal (Q1–Q4). De totaalkolom telt de
+  maanden met ingelezen transacties op (bijv. *t/m sep*). Maanden zonder
+  transacties worden niet vergeleken (·).
   Daaronder **Inkomsten vs uitgaven per maand**: inkomsten verwacht en
   werkelijk, uitgaven en sparen (los van elkaar) begroot en werkelijk, en
-  wat er over is (verwacht en werkelijk), met dezelfde periode en totalen.
+  wat er over is (verwacht en werkelijk), met dezelfde periode en totalen;
+  zolang er nog maanden zonder transacties zijn, staat ernaast wat je voor
+  de hele periode had verwacht (*Heel jaar* of *Heel Q4*).
   Tik op een bedrag voor de transacties van die categorie of post in die
   maand (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste
   lasten*).

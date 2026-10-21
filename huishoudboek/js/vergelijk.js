@@ -1,9 +1,9 @@
 "use strict";
 // Budget vs werkelijk per hoofdcategorie en maand, voor het hele jaar of één kwartaal.
-// Per hoofdcategorie drie regels (budget, werkelijk, verschil), per post daaronder alleen het verschil.
+// Per hoofdcategorie een blok met per post het verschil met het budget en het totale verschil van de categorie.
 // Verschil is gunstig (+) als je minder uitgaf of meer ontving/spaarde dan begroot; elke maand staat op zichzelf.
-// De totaalkolom telt de maanden met ingelezen transacties op. Zijn er nog maanden zonder transacties, dan staat
-// ernaast het budget voor de hele periode: wat je aan het begin van het jaar verwachtte.
+// De totaalkolom telt de maanden met ingelezen transacties op. In de tabel inkomsten vs uitgaven staat zolang er nog
+// maanden zonder transacties zijn ook het budget voor de hele periode: wat je aan het begin van het jaar verwachtte.
 const fmtCell = (v, signed) => {
   const n = eur0.format(Math.abs(v)).replace("€", "").trim();
   return signed ? (v > 0.5 ? "+" : v < -0.5 ? "−" : "") + n : (v < -0.5 ? "−" : "") + n;
@@ -70,7 +70,6 @@ function viewCompare(main) {
   const P = cmpPeriod(has);
   const net = Array(13).fill(0);
   for (const t of S.tx) if (Math.floor(t.d / 10000) === Y) net[Math.floor(t.d / 100) % 100] += t.a;
-  const KINDS = ["Budget", "Werkelijk", "Verschil"];
   const toTx = f => k => () => {
     S.tab = "transacties";
     S.fCat = f;
@@ -91,7 +90,7 @@ function viewCompare(main) {
       go: opt.go && !P.Q && opt.go(0),
       tot: true,
     });
-    if (P.partial)
+    if (P.partial && !opt.noFull)
       cells.push(
         opt.always ? { v: P.ks.reduce((s, k) => s + f(k), 0), show: true, full: true } : { blank: true, full: true },
       );
@@ -105,50 +104,33 @@ function viewCompare(main) {
         c.full ? "yr full" : c.tot ? "yr" : "",
       ),
     );
-  // a(k)/b(k): werkelijk en budget in maand k; good: +1 als meer werkelijk gunstig is (inkomsten, sparen), −1 bij uitgaven.
-  const block = (label, a, b, good, go2) => {
-    const rows = [
-      cellsOf(b, { always: true }),
-      cellsOf(a, { go: go2 }),
-      cellsOf(k => good * (a(k) - b(k)), { signed: true }),
-    ];
-    return rows.map((cells, ri) =>
-      el(
-        "tr",
-        { class: "k" + ri + (ri === 0 ? " first" : "") },
-        ri === 0 ? el("th", { class: "cat", rowspan: 3, scope: "rowgroup" }, label) : null,
-        el("th", { class: "kind", scope: "row" }, KINDS[ri]),
-        ...tds(cells, label + " " + KINDS[ri].toLowerCase()),
-      ),
-    );
-  };
-  const subRow = (c, grp, lastSub) => {
-    const good = grp.kind === "uit" ? -1 : 1;
-    const d = k => good * (actual(grp, (T[c] || [])[k] || 0) - budgetOf(Y, c, k));
-    return el(
+  // Per hoofdcategorie een blok: kop, per post het verschil met het budget, en het totale verschil.
+  // Verschil is gunstig (+) bij minder uitgeven of meer ontvangen/sparen dan begroot.
+  const diffOf = (grp, cs) => k =>
+    (grp.kind === "uit" ? -1 : 1) * cs.reduce((s, c) => s + actual(grp, (T[c] || [])[k] || 0) - budgetOf(Y, c, k), 0);
+  const ncols = P.ks.length + 1;
+  const row = (cls, label, f, go2) =>
+    el(
       "tr",
-      { class: "sub" + (lastSub ? " sublast" : "") },
-      el("th", { class: "cat", scope: "row", title: c }, c),
-      el("th", { class: "kind" }, "Verschil"),
-      ...tds(cellsOf(d, { signed: true, go: toTx(c) }), c + " verschil"),
+      { class: cls },
+      el("th", { class: "cat", scope: "row", title: label }, label),
+      ...tds(cellsOf(f, { signed: true, go: go2, noFull: true }), label + " verschil"),
     );
-  };
   const used = c => budgetOf(Y, c, 0) >= 0.5 || (T[c] || []).some(v => Math.abs(v) >= 0.5);
   const body = [];
   GROUPS.forEach(grp => {
-    if (!grp.cats.some(used)) return;
+    const subs = grp.cats.filter(used);
+    if (!subs.length) return;
     body.push(
-      ...block(
-        grp.name,
-        k => grp.cats.reduce((s, c) => s + actual(grp, (T[c] || [])[k] || 0), 0),
-        k => grp.cats.reduce((s, c) => s + budgetOf(Y, c, k), 0),
-        grp.kind === "uit" ? -1 : 1,
-        toTx("grp:" + grp.name),
+      el(
+        "tr",
+        { class: "grphead" },
+        el("th", { class: "cat", scope: "rowgroup" }, grp.name),
+        el("td", { class: "c", colspan: ncols }),
       ),
     );
-    // Daaronder per post alleen het verschil met het budget.
-    const subs = grp.cats.filter(used);
-    subs.forEach((c, i) => body.push(subRow(c, grp, i === subs.length - 1)));
+    subs.forEach(c => body.push(row("sub", c, diffOf(grp, [c]), toTx(c))));
+    body.push(row("total", grp.name + " totaal", diffOf(grp, grp.cats), toTx("grp:" + grp.name)));
   });
   main.append(
     el(
@@ -161,7 +143,7 @@ function viewCompare(main) {
         el(
           "div",
           { class: "of" },
-          "Verschil per maand; groen is gunstig. Per post staat alleen het verschil. Tik op een bedrag voor de transacties." +
+          "Verschil met het budget per maand; groen is gunstig (minder uitgegeven of meer ontvangen dan begroot). Tik op een bedrag voor de transacties." +
             (P.partial ? " · = nog geen transacties ingelezen." : ""),
         ),
       ),
@@ -193,7 +175,7 @@ function viewCompare(main) {
     el(
       "div",
       { class: "bgridwrap" },
-      el("table", { class: "bgrid cmp" }, el("thead", {}, cmpHead(P, has)), el("tbody", {}, ...body)),
+      el("table", { class: "bgrid cmp diff" }, el("thead", {}, cmpHead(P, has, true)), el("tbody", {}, ...body)),
     ),
   );
   main.append(incomeVsSpending(Y, has, P, net, toTx, cellsOf, tds));
@@ -207,15 +189,15 @@ function viewCompare(main) {
       ),
     );
 }
-function cmpHead(P, has) {
+function cmpHead(P, has, diffOnly) {
   return el(
     "tr",
     {},
     el("th", { class: "cat" }, ""),
-    el("th", { class: "kind" }, ""),
+    diffOnly ? null : el("th", { class: "kind" }, ""),
     ...P.ks.map(k => el("th", { class: has(k) ? "" : "nodata" }, MONTHS[k - 1])),
     el("th", { class: "yr" }, P.totLabel),
-    P.partial ? el("th", { class: "yr full" }, P.fullLabel) : null,
+    P.partial && !diffOnly ? el("th", { class: "yr full" }, P.fullLabel) : null,
   );
 }
 
