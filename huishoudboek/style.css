@@ -1987,3 +1987,25 @@ a.btn {
   color: var(--muted);
   font-weight: 500;
 }
+/* maandsamenvatting */
+.monthseg {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  align-self: flex-start;
+  scrollbar-width: none;
+}
+.monthseg .seg {
+  flex: none;
+}
+@media (max-width: 480px) {
+  .herotop {
+    flex-wrap: wrap;
+  }
+  .herobtns {
+    justify-content: flex-start;
+  }
+  .herobtns .btn {
+    white-space: nowrap;
+  }
+}

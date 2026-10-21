@@ -3,7 +3,10 @@
 /* ---------- weergave ---------- */
 function render() {
   for (const b of document.querySelectorAll("#tabs button"))
-    b.setAttribute("aria-selected", b.dataset.tab === (S.tab === "vergelijk" ? "overzicht" : S.tab));
+    b.setAttribute(
+      "aria-selected",
+      b.dataset.tab === (S.tab === "vergelijk" || S.tab === "samenvatting" ? "overzicht" : S.tab),
+    );
   const cur = document.querySelector('#tabs button[aria-selected="true"]');
   if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest", inline: "nearest" });
   $("#back").hidden = !(history.state && history.state.n > 0);
@@ -26,6 +29,7 @@ function render() {
     importeren: viewImport,
     gebruikers: viewUsers,
     vergelijk: viewCompare,
+    samenvatting: viewSummary,
   })[S.tab](main);
 }
 function renderProfiles() {
@@ -84,7 +88,12 @@ function renderRail() {
   const rail = $("#rail");
   rail.replaceChildren();
   const ov = S.tab === "overzicht" || S.tab === "vergelijk";
-  rail.hidden = S.tab === "regels" || S.tab === "importeren" || S.tab === "gebruikers" || (!ov && !S.tx.length);
+  rail.hidden =
+    S.tab === "regels" ||
+    S.tab === "samenvatting" ||
+    S.tab === "importeren" ||
+    S.tab === "gebruikers" ||
+    (!ov && !S.tx.length);
   if (rail.hidden) return;
   // Op het overzicht kun je ook jaren zonder transacties kiezen (bijv. volgend jaar), om alvast te begroten.
   const ys = ov ? budgetYears() : years().slice().reverse();

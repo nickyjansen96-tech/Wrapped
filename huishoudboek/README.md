@@ -85,6 +85,17 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   maand (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste
   lasten*).
 
+## Maandsamenvatting door AI
+
+Met **✨ Maandsamenvatting** (op *Overzicht en budget* en bij *Vergelijk per
+maand*) kies je een maand. De app maakt een export met je cijfers en een
+vraag: totalen per post tegenover budget en de drie maanden ervoor, de
+grootste uitgaven, vaste afschrijvingen, het jaar tot nu toe en het budget
+van de volgende maand. Kopieer hem (of sla hem op als bestand) en plak hem
+in Claude of ChatGPT: je krijgt een kort overzicht van hoe de maand ging en
+een vooruitblik op de maand erna. Rekeningnummers, pasnummers en je naam
+gaan niet mee; namen van winkels en partijen wel.
+
 ## Regels laten maken door een AI-chat
 
 In het tabblad **Regels en AI**, bij *Transacties laten indelen door AI*. De
@@ -145,6 +156,7 @@ de app onthoudt welke gebruiker het laatst open stond.
   `opslag` (gebruikers en opslag) · `rekenen` (totalen en budgetten) ·
   `weergave` (kop, jaar- en maandkeuze) · `transacties` · `regels` (incl. AI) ·
   `overzicht` · `budget` (budgettabel) · `vergelijk` (budget vs werkelijk) ·
+  `samenvatting` (maandsamenvatting door AI) ·
   `vermogen` · `banken` (bankbestanden herkennen) ·
   `importeren` (inlezen en back-ups) · `gebruikers` ·
   `rondleiding` · `start` (navigatie en opstarten)

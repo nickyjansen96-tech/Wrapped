@@ -166,16 +166,21 @@ function viewCompare(main) {
         ),
       ),
       el(
-        "button",
-        {
-          class: "btn sm",
-          onclick: () => {
-            S.tab = "overzicht";
-            S.editBudget = true;
-            go();
+        "div",
+        { class: "tools" },
+        S.tx.length ? summaryButton("btn sm") : null,
+        el(
+          "button",
+          {
+            class: "btn sm",
+            onclick: () => {
+              S.tab = "overzicht";
+              S.editBudget = true;
+              go();
+            },
           },
-        },
-        "Budget bewerken",
+          "Budget bewerken",
+        ),
       ),
     ),
     quarterSwitch(),

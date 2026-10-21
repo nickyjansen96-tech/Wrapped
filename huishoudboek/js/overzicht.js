@@ -89,6 +89,7 @@ function viewStatus(main) {
             hasB ? "Budget bewerken" : "Budget invullen",
           ),
           hasB ? el("button", { class: "btn", id: "compare-btn", onclick: goCompare }, "Vergelijk per maand") : null,
+          S.tx.length ? summaryButton() : null,
         ),
       ),
       el(
