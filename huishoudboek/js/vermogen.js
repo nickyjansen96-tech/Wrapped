@@ -10,7 +10,7 @@ const WSER = [
 function wealthData(year) {
   const { T, cnt, span } = totals(year);
   const net = Array(13).fill(0);
-  for (const t of S.tx) if (Math.floor(t.d / 10000) === year) net[Math.floor(t.d / 100) % 100] += t.a;
+  for (const t of S.tx) if (Math.floor(t.d / 10000) === year && counted(t)) net[Math.floor(t.d / 100) % 100] += t.a;
   let last = 0;
   for (let m = 12; m >= 1; m--)
     if (cnt[m]) {

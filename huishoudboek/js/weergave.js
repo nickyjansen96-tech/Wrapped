@@ -152,7 +152,7 @@ function catSelect(value, onchange, opts = {}) {
     s.append(
       el("option", { value: "", title: "Automatisch via een regel" }, opts.auto === UNK ? "Kies categorie" : opts.auto),
     );
-  for (const g of GROUPS) {
+  for (const g of [...GROUPS, APART]) {
     const og = el("optgroup", { label: g.name });
     for (const c of g.cats) og.append(el("option", { value: c, selected: c === value }, c));
     s.append(og);

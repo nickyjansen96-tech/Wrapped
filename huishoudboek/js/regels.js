@@ -80,7 +80,9 @@ function aiPrompt(max = 150) {
       "\n   omschrijving: " +
       [...g.ex].map(e => '"' + e + '"').join(" ; "),
   );
-  const cats = GROUPS.map(g => "- " + g.name + ": " + g.cats.join(" · ")).join("\n");
+  const cats =
+    GROUPS.map(g => "- " + g.name + ": " + g.cats.join(" · ")).join("\n") +
+    "\n- Apart (telt niet mee in het overzicht): Declaraties (alleen voor partijen die altijd een declaratie zijn, zoals de terugbetaling van onkosten door mijn werkgever; losse voorgeschoten aankopen markeer ik zelf) · Niet meetellen (bijv. overboekingen tussen mijn eigen betaalrekeningen)";
   const have = S.rules.length
     ? S.rules
         .slice(0, 100)
@@ -121,12 +123,12 @@ const normCat = s =>
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
-const CATNORM = new Map(ALLCATS.map(c => [normCat(c), c]));
+const CATNORM = new Map([...CATSET].map(c => [normCat(c), c]));
 function matchCat(s) {
   const n = normCat(s);
   if (!n) return null;
   if (CATNORM.has(n)) return CATNORM.get(n);
-  const hits = ALLCATS.filter(c => {
+  const hits = [...CATSET].filter(c => {
     const m = normCat(c);
     return m.startsWith(n) || n.startsWith(m) || (n.length >= 5 && m.includes(n));
   });

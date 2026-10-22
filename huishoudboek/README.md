@@ -84,6 +84,18 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   maand (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste
   lasten*).
 
+## Declaraties en niet meetellen
+
+Naast de gewone categorieën zijn er twee aparte: **Declaraties** (kosten die
+je voorschiet en terugkrijgt, en de terugbetaling) en **Niet meetellen**
+(bijv. overboekingen tussen je eigen rekeningen). Kies ze in de
+categorielijst van een transactie, met een regel, of tik op een transactie
+en kies **Declaratie** of **Niet meetellen**. Ze tellen niet mee in Over,
+de budgetten, de vergelijking, het vermogen en de maandsamenvatting. Op
+*Overzicht en budget* zie je hoeveel declaraties er nog openstaan
+(voorgeschoten min terugontvangen) en hoeveel transacties niet meetellen;
+met **Bekijk** ga je naar die transacties.
+
 ## Maandsamenvatting door AI
 
 Met **✨ Maandsamenvatting** (op *Overzicht en budget* en bij *Vergelijk per

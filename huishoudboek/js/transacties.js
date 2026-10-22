@@ -158,6 +158,27 @@ function txDetails(t, info) {
     el("dd", { class: "raw" }, info.full),
   );
 }
+// Snelknoppen in de details: als declaratie markeren of niet meetellen, en weer terug.
+function apartTools(t) {
+  const c = catOf(t),
+    own = S.overrides[t.i];
+  const set = v => {
+    if (v) S.overrides[t.i] = v;
+    else delete S.overrides[t.i];
+    saveOverrides();
+    render();
+  };
+  const btn = (label, v, id) => el("button", { class: "btn sm", id, onclick: () => set(v) }, label);
+  return el(
+    "div",
+    { class: "tools apart" },
+    APART.cats.includes(c)
+      ? own === c
+        ? btn(c === DECL ? "Geen declaratie" : "Weer meetellen", "", "apart-undo")
+        : el("span", { class: "of" }, "Via een regel op " + c.toLowerCase() + " gezet.")
+      : [btn("Declaratie", DECL, "apart-decl"), btn("Niet meetellen", SKIP, "apart-skip")],
+  );
+}
 function txRow(t) {
   const info = txInfo(t),
     auto = autoCat(t),
@@ -183,7 +204,7 @@ function txRow(t) {
     .join(" · ");
   const row = el(
     "div",
-    { class: "tx" + (open ? " open" : "") },
+    { class: "tx" + (open ? " open" : "") + (counted(t) ? "" : " apart") },
     el(
       "button",
       {
@@ -221,7 +242,7 @@ function txRow(t) {
       "＋ Regel",
     ),
   );
-  if (open) row.append(txDetails(t, info));
+  if (open) row.append(txDetails(t, info), apartTools(t));
   if (S.ruleFor === t.i) row.append(ruleForm(t, info));
   return row;
 }
@@ -258,6 +279,11 @@ function viewTx(main) {
         el("option", { value: "grp:" + g.name, selected: S.fCat === "grp:" + g.name }, "Alle " + g.name.toLowerCase()),
         g.cats.map(c => el("option", { value: c, selected: c === S.fCat }, c)),
       ),
+    ),
+    el(
+      "optgroup",
+      { label: APART.name },
+      APART.cats.map(c => el("option", { value: c, selected: c === S.fCat }, c)),
     ),
   );
   main.append(

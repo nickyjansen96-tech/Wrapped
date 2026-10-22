@@ -2050,3 +2050,48 @@ a.btn {
     max-width: 8.5rem;
   }
 }
+/* declaraties en niet meetellen */
+.apartcard {
+  gap: 10px;
+}
+.apartcard .decl {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.apartcard .l {
+  font-size: 13px;
+  color: var(--muted);
+}
+.apartcard .v {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.apartcard .v.todo {
+  color: var(--accent);
+}
+.apartcard .s {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.apartcard .skipline {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.apartcard .decl + .skipline {
+  border-top: 0.5px solid var(--line);
+  padding-top: 10px;
+}
+.tx.apart .who,
+.tx.apart .amt {
+  color: var(--muted);
+}
+.tools.apart {
+  grid-column: 1/-1;
+  margin: -2px 0 6px;
+}

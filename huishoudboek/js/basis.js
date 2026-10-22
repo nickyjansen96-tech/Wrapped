@@ -60,7 +60,7 @@ const MONTHS_LONG = [
   "november",
   "december",
 ];
-const APP_VERSION = "32";
+const APP_VERSION = "33";
 const TABS = [
   "overzicht",
   "vergelijk",
@@ -116,4 +116,9 @@ const eur0 = { format: v => EUR0.format(Math.round(v) || 0) };
 const eur2 = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" });
 const f0 = n => (Math.abs(n) < 0.5 ? "–" : eur0.format(n));
 const nTx = n => n + (n === 1 ? " transactie" : " transacties");
-const CATSET = new Set(ALLCATS);
+// Buiten de overzichten: declaraties (voorgeschoten kosten die je terugkrijgt) en transacties die je niet wilt
+// meetellen, zoals overboekingen tussen eigen rekeningen. Ze hebben geen budget en tellen niet mee in Over.
+const DECL = "Declaraties",
+  SKIP = "Niet meetellen";
+const APART = { name: "Apart (telt niet mee)", cats: [DECL, SKIP] };
+const CATSET = new Set([...ALLCATS, ...APART.cats]);

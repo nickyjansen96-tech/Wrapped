@@ -29,6 +29,7 @@ PLAYWRIGHT_MODULE=/pad/naar/playwright/index.mjs CHROMIUM_PATH=/pad/naar/chromiu
 | 08-vergelijk | Budget vs werkelijk per hoofdcategorie, nagerekend |
 | 09-inkomsten-uitgaven | Alle maanden, inkomsten vs uitgaven per maand (nagerekend) en de samenvatting onder de budgettabel |
 | 11-samenvatting | Maandsamenvatting: knoppen, maand kiezen, export nagerekend, geen rekeningnummers, kopiëren en bestand |
+| 12-apart | Declaraties en niet meetellen: markeren, buiten de overzichten, openstaand bedrag, filter, regels, AI, bewaren |
 | 10-banken | ING, Rabobank en bunq: herkenning, bedragen, naam, plaats en soort betaling, dubbelen, opslaan |
 
 De bestanden in `fixtures/` zijn verzonnen voorbeeldtransacties, geen echte

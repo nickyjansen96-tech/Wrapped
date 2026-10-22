@@ -122,6 +122,7 @@ function viewStatus(main) {
     );
     return;
   }
+  main.append(...apartCard(x));
   if (x.unkN[x.m])
     main.append(
       el(
@@ -234,4 +235,59 @@ function catLine(grp, c, a, b) {
         )
       : null,
   );
+}
+
+// Declaraties (wat je nog terugkrijgt) en transacties die niet meetellen; beide staan buiten de cijfers hierboven.
+function apartCard(x) {
+  const d = declBalance(),
+    skipN = S.tx.filter(
+      t => Math.floor(t.d / 10000) === x.Y && (!x.m || Math.floor(t.d / 100) % 100 === x.m) && catOf(t) === SKIP,
+    ).length;
+  if (!d.n && !skipN) return [];
+  const show = c => () => {
+    S.tab = "transacties";
+    S.fCat = c;
+    S.fUnk = false;
+    S.month = 0;
+    S.shown = 50;
+    go();
+  };
+  const card = el("div", { class: "card apartcard", id: "apart-card" });
+  if (d.n)
+    card.append(
+      el(
+        "div",
+        { class: "decl" },
+        el(
+          "div",
+          {},
+          el("div", { class: "l" }, "Declaraties"),
+          el("div", { class: "v" + (d.open > 0.5 ? " todo" : "") }, eur2.format(Math.abs(d.open))),
+          el(
+            "div",
+            { class: "s" },
+            (d.open > 0.5
+              ? "nog terug te krijgen"
+              : d.open < -0.5
+                ? "meer terugontvangen dan voorgeschoten"
+                : "alles terugontvangen") +
+              " · voorgeschoten " +
+              eur2.format(d.paid) +
+              ", terug " +
+              eur2.format(d.back),
+          ),
+        ),
+        el("button", { class: "btn sm", id: "decl-btn", onclick: show(DECL) }, "Bekijk"),
+      ),
+    );
+  if (skipN)
+    card.append(
+      el(
+        "div",
+        { class: "skipline" },
+        el("span", {}, nTx(skipN) + " " + (skipN === 1 ? "telt" : "tellen") + " niet mee in dit overzicht."),
+        el("button", { class: "linkbtn", onclick: show(SKIP) }, "Bekijk"),
+      ),
+    );
+  return [card];
 }

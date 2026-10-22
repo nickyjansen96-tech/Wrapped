@@ -23,6 +23,21 @@ function pickDefaults() {
 }
 
 /* ---------- rekenen ---------- */
+// Telt een transactie mee in de overzichten? Niet bij Declaraties en Niet meetellen.
+const counted = t => !APART.cats.includes(catOf(t));
+// Declaraties tot en met datum `upto` (jjjjmmdd, 0 = alles): voorgeschoten, terugontvangen en wat nog openstaat.
+function declBalance(upto = 0) {
+  let paid = 0,
+    back = 0,
+    n = 0;
+  for (const t of S.tx)
+    if ((!upto || t.d <= upto) && catOf(t) === DECL) {
+      n++;
+      if (t.a < 0) paid -= t.a;
+      else back += t.a;
+    }
+  return { paid, back, open: paid - back, n };
+}
 function totals(year) {
   const T = {};
   let unkN = Array(13).fill(0),
@@ -37,6 +52,7 @@ function totals(year) {
     cnt[m]++;
     if (!min || t.d < min) min = t.d;
     if (t.d > max) max = t.d;
+    if (APART.cats.includes(c)) continue;
     if (c === UNK) {
       unkN[m]++;
       unkN[0]++;

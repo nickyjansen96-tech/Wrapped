@@ -25,7 +25,11 @@ function summaryPrompt(ym) {
     NY = Math.floor(nx / 100),
     nk = nx % 100;
   const { T, cnt, unkN } = totals(Y);
-  const monthTx = S.tx.filter(t => Math.floor(t.d / 100) === ym);
+  const monthAll = S.tx.filter(t => Math.floor(t.d / 100) === ym),
+    monthTx = monthAll.filter(counted);
+  const declM = monthAll.filter(t => catOf(t) === DECL),
+    skipN = monthAll.filter(t => catOf(t) === SKIP).length,
+    decl = declBalance(ym * 100 + 31);
   const cats = GROUPS.flatMap(g => g.cats.map(c => ({ g, c })));
   const act = (g, c, m) => actual(g, (T[c] || [])[m] || 0);
   // Gemiddelde van de (maximaal) drie maanden ervoor met transacties, over de jaargrens heen.
@@ -78,10 +82,21 @@ function summaryPrompt(ym) {
     "Uitgaven (ingedeeld, zonder sparen): " + e0(uit) + vs("begroot", uitOf(Y, k)),
     "Gespaard en belegd: " + e0(sp) + vs("begroot", spOf(Y, k)),
     "Over (saldo van de maand): " + e0(net) + vs("verwacht", overOf(Y, k)),
-    "Aantal transacties: " + cnt[k],
+    "Aantal transacties: " + monthTx.length,
     unkN[k]
       ? "Nog zonder categorie: " + unkN[k] + " transacties, bijgeschreven " + e0(unkIn) + ", afgeschreven " + e0(unkOut)
       : "Alle transacties zijn ingedeeld.",
+    ...(declM.length || decl.n
+      ? [
+          "Declaraties (tellen niet mee hierboven): deze maand voorgeschoten " +
+            e0(declM.reduce((s, t) => s - Math.min(0, t.a), 0)) +
+            ", terugontvangen " +
+            e0(declM.reduce((s, t) => s + Math.max(0, t.a), 0)) +
+            "; eind van de maand nog terug te krijgen: " +
+            e0(decl.open),
+        ]
+      : []),
+    ...(skipN ? [skipN + " transacties tellen bewust niet mee (bijv. overboekingen tussen eigen rekeningen)."] : []),
     "",
     "Per post (werkelijk | budget | verschil, + is gunstig" +
       (prev.length ? " | gemiddeld in de " + prev.length + " maanden ervoor" : "") +
