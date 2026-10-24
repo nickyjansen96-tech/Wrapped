@@ -27,6 +27,7 @@ const GROUPS = [
       "Kleding en schoenen",
       "Persoonlijke verzorging",
       "Uit eten, uitgaan en hobby's",
+      "Sport",
       "Cadeaus en donaties",
       "Huisdieren",
     ],
@@ -60,7 +61,7 @@ const MONTHS_LONG = [
   "november",
   "december",
 ];
-const APP_VERSION = "33";
+const APP_VERSION = "34";
 const TABS = [
   "overzicht",
   "vergelijk",
