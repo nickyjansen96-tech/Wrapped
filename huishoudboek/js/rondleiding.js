@@ -58,7 +58,7 @@ const TOUR = [
   {
     target: "#help",
     title: "Klaar!",
-    text: "Begin met het inlezen van je bankexport. Deze rondleiding kun je altijd opnieuw bekijken met de ?-knop.",
+    text: "Begin met het inlezen van je bankexport. Deze rondleiding kun je altijd opnieuw bekijken: onderaan elke pagina staat Rondleiding bekijken.",
   },
 ];
 let tourIdx = -1,

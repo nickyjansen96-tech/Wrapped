@@ -33,7 +33,10 @@ financiële gegevens: die blijven op je toestel.
 
 Rechtsboven, naast de profielen, staat het menu (☰) met de onderdelen:
 *Overzicht en budget*, *Sparen en vermogen*, *Transacties*, *Regels en AI* en
-*Importeren*. Op de knop staat waar je nu bent; tik erop om uit te klappen.
+*Importeren*; het huidige onderdeel is gemarkeerd. Op een telefoon staan de
+titel, je profiel (één knop met je naam die uitklapt om te wisselen of te
+beheren) en het menu samen op één regel. Onderaan elke pagina staat
+*Rondleiding bekijken*.
 
 ## Transacties
 

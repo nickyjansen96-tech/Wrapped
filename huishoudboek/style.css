@@ -162,33 +162,41 @@ h1 {
   position: relative;
 }
 .menubtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 5px 12px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 36px;
+  padding: 0;
   color: var(--ink);
   background: var(--fill);
   border: 0;
   border-radius: 9px;
   cursor: pointer;
-  white-space: nowrap;
 }
 .menubtn:hover,
 .menubtn[aria-expanded="true"] {
   background: var(--accent-soft);
   color: var(--accent);
 }
+/* het "stapeltje": drie streepjes */
 .menubtn .burger {
-  font-size: 16px;
-  line-height: 1;
+  display: grid;
+  gap: 4px;
+  width: 18px;
 }
-.menubtn .chev {
-  font-size: 11px;
-  color: var(--muted);
+.menubtn .burger i {
+  display: block;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 nav.tabs {
   position: absolute;
@@ -2350,4 +2358,135 @@ a.btn {
 .sortlist .tick {
   width: 1.1em;
   color: var(--accent);
+}
+/* rondleiding en versie onderaan elke pagina */
+.pagefoot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  font-size: 13px;
+  color: var(--muted);
+}
+.pagefoot .ver::before {
+  content: "·";
+  margin-right: 10px;
+}
+/* profielkeuze als één knop (telefoon) */
+.pmenu {
+  position: relative;
+  display: none;
+}
+.profbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 9.5rem;
+  min-height: 36px;
+  padding: 4px 10px 4px 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--fill);
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.profbtn .pname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profbtn .chev {
+  font-size: 11px;
+  color: var(--muted);
+}
+.profbtn[aria-expanded="true"] {
+  background: var(--accent-soft);
+}
+.proflist {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  display: grid;
+  min-width: 13rem;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.16),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08);
+}
+.proflist[hidden] {
+  display: none;
+}
+.proflist button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  padding: 10px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.proflist button:hover {
+  background: var(--sunk);
+}
+.proflist button[aria-checked="true"] {
+  color: var(--accent);
+  font-weight: 600;
+}
+.proflist .manage {
+  border-top: 0.5px solid var(--line);
+  border-radius: 0 0 9px 9px;
+  color: var(--accent);
+}
+.proflist .tick {
+  width: 1.1em;
+  flex: none;
+  color: var(--accent);
+}
+/* telefoon: titel, profiel en menu op één regel */
+@media (max-width: 600px) {
+  .bar {
+    gap: 8px;
+  }
+  h1 {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 17px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .back span {
+    display: none;
+  }
+  .save:not(.err) {
+    display: none;
+  }
+  .profiles {
+    background: none;
+    padding: 0;
+  }
+  .profiles .users,
+  .profiles .seg.add {
+    display: none;
+  }
+  .pmenu {
+    display: block;
+  }
 }

@@ -432,12 +432,4 @@ function viewImport(main) {
       ),
     );
   }
-  main.append(
-    el(
-      "p",
-      { class: "prose foot" },
-      "Versie " + APP_VERSION + " · ",
-      el("button", { class: "linkbtn small", onclick: startTour }, "Rondleiding bekijken"),
-    ),
-  );
 }

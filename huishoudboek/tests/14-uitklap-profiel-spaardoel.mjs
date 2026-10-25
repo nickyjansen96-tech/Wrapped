@@ -179,6 +179,45 @@ const mb = await p.locator("#menu-btn").boundingBox(),
 ok("menu naast de profielen", Math.abs(mb.y - pb.y) < 20 && mb.x > pb.x, JSON.stringify([mb, pb]));
 await p.click("#menu-btn");
 await p.screenshot({ path: SP + "/menu.png" });
+// 5. Rondleiding onderaan, ☰-menu, telefoonkop op één regel met profielknop
+await p.keyboard.press("Escape");
+ok("geen ?-knop meer in de kop", (await p.locator(".bar .help").count()) === 0);
+ok("rondleiding onderaan de pagina", (await p.locator("footer #help").innerText()) === "Rondleiding bekijken");
+const fy = (await p.locator("footer #help").boundingBox()).y,
+  my = await p.locator("#main").boundingBox();
+ok("onder de inhoud", fy >= my.y + my.height - 1, fy + " vs " + (my.y + my.height));
+await p.click("footer #help");
+ok("start de rondleiding", await p.locator(".tour-tip").isVisible());
+await p.keyboard.press("Escape");
+ok("menuknop is een stapeltje", (await p.locator("#menu-btn .burger i").count()) === 3);
+await p.setViewportSize({ width: 375, height: 700 });
+await p.waitForTimeout(100);
+const yb = async s => (await p.locator(s).boundingBox()) || { y: -999, x: 0, width: 0, height: 0 };
+const hb = await yb("h1"),
+  prb = await yb("#prof-btn"),
+  mnb = await yb("#menu-btn");
+const mid = r => r.y + r.height / 2;
+ok(
+  "telefoon: titel, profiel en menu op één regel",
+  Math.abs(mid(hb) - mid(prb)) < 8 && Math.abs(mid(prb) - mid(mnb)) < 8 && prb.x > hb.x && mnb.x > prb.x,
+  [hb, prb, mnb].map(r => Math.round(r.y) + "/" + Math.round(r.x)).join(" "),
+);
+ok("telefoon: geen profielknoppen naast elkaar", await p.locator("#profiles .users").isHidden());
+ok("profielknop toont naam", (await p.locator("#prof-btn").innerText()).includes("Nick"));
+await p.click("#prof-btn");
+ok("profiellijst uitgeklapt", await p.locator("#prof-list").isVisible());
+await p.click("#prof-list >> text=Heleen");
+ok(
+  "gewisseld naar Heleen",
+  (await p.locator("#prof-btn").innerText()).includes("Heleen") && (await p.evaluate(() => profileName())) === "Heleen",
+);
+await p.click("#prof-btn");
+await p.click("#prof-list >> text=Profielen beheren");
+ok("profielen beheren vanuit de lijst", (await p.locator("text=Profiel toevoegen").count()) === 1);
+await p.click("#prof-btn");
+await p.click("h1");
+ok("tik ernaast sluit profiellijst", await p.locator("#prof-list").isHidden());
+await p.screenshot({ path: SP + "/kop-tel.png", clip: { x: 0, y: 0, width: 375, height: 120 } });
 ok("geen JS-fouten", errs.length === 0, errs.join("|"));
 console.log(fails ? fails + " FAILED" : "ALL PASSED");
 process.exitCode = fails ? 1 : 0;

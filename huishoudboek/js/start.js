@@ -73,6 +73,7 @@ addEventListener("popstate", e => {
 });
 $("#back").addEventListener("click", () => history.back());
 $("#help").addEventListener("click", startTour);
+$("#ver").textContent = "Versie " + APP_VERSION;
 // Menu met de onderdelen, rechtsboven naast de profielen: openklappen, kiezen, en dicht bij een tik ernaast of Esc.
 function setMenu(open) {
   $("#tabs").hidden = !open;

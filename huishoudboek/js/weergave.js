@@ -38,8 +38,66 @@ function openUsers() {
     go();
   }
 }
+// Profielen: op een groot scherm als knoppen naast elkaar met ✎; op een telefoon één knop met je naam die een lijstje
+// uitklapt (wisselen en beheren), zodat titel, profiel en menu op één regel passen.
 function renderProfiles() {
   const box = $("#profiles");
+  if (renderProfiles.cleanup) renderProfiles.cleanup();
+  const me = PROFILES.find(p => p.id === profile),
+    open = !!S.profOpen;
+  const close = () => {
+    S.profOpen = false;
+    renderProfiles();
+  };
+  const plist = el(
+    "div",
+    { class: "proflist", id: "prof-list", role: "menu", hidden: !open },
+    ...PROFILES.map(p =>
+      el(
+        "button",
+        {
+          role: "menuitemradio",
+          "aria-checked": p.id === profile,
+          onclick: () => {
+            S.profOpen = false;
+            if (p.id === profile) renderProfiles();
+            else switchProfile(p.id);
+          },
+        },
+        el("span", { class: "tick", "aria-hidden": "true" }, p.id === profile ? "✓" : ""),
+        p.name,
+      ),
+    ),
+    el(
+      "button",
+      {
+        role: "menuitem",
+        class: "manage",
+        onclick: () => {
+          S.profOpen = false;
+          openUsers();
+        },
+      },
+      el("span", { class: "tick", "aria-hidden": "true" }, "✎"),
+      "Profielen beheren",
+    ),
+  );
+  if (open)
+    setTimeout(() => {
+      const off = e => {
+        if (!e.target.closest || !e.target.closest(".pmenu")) close();
+      };
+      const esc = e => {
+        if (e.key === "Escape") close();
+      };
+      document.addEventListener("click", off, true);
+      document.addEventListener("keydown", esc, true);
+      renderProfiles.cleanup = () => {
+        document.removeEventListener("click", off, true);
+        document.removeEventListener("keydown", esc, true);
+        renderProfiles.cleanup = null;
+      };
+    });
   box.replaceChildren(
     el(
       "div",
@@ -68,6 +126,28 @@ function renderProfiles() {
         onclick: openUsers,
       },
       "✎",
+    ),
+    el(
+      "div",
+      { class: "pmenu" },
+      el(
+        "button",
+        {
+          class: "profbtn",
+          id: "prof-btn",
+          "aria-haspopup": "true",
+          "aria-expanded": open,
+          "aria-controls": "prof-list",
+          "aria-label": "Profiel: " + (me ? me.name : "") + ". Wisselen of beheren",
+          onclick: () => {
+            S.profOpen = !open;
+            renderProfiles();
+          },
+        },
+        el("span", { class: "pname" }, me ? me.name : "Profiel"),
+        el("span", { class: "chev", "aria-hidden": "true" }, "▾"),
+      ),
+      plist,
     ),
   );
 }
