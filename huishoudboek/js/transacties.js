@@ -246,12 +246,37 @@ function txRow(t) {
   if (S.ruleFor === t.i) row.append(ruleForm(t, info));
   return row;
 }
+// Sorteren van de transactielijst. Bij gelijke waarde staat de nieuwste bovenaan.
+const TX_SORTS = [
+  ["new", "Nieuwste"],
+  ["old", "Oudste"],
+  ["out", "Grootste uitgave"],
+  ["in", "Grootste bijschrijving"],
+  ["name", "Naam A–Z"],
+  ["cat", "Categorie"],
+];
+const CAT_ORDER = new Map([...ALLCATS, ...APART.cats, UNK].map((c, i) => [c, i]));
+function sortTx(list, how) {
+  const byDate = (a, b) => b.d - a.d;
+  if (how === "old") return list.slice().sort((a, b) => a.d - b.d);
+  if (how === "out") return list.slice().sort((a, b) => a.a - b.a || byDate(a, b));
+  if (how === "in") return list.slice().sort((a, b) => b.a - a.a || byDate(a, b));
+  if (how === "name" || how === "cat") {
+    const key = new Map(
+      list.map(t => [t, how === "name" ? txInfo(t).name.toLowerCase() : (CAT_ORDER.get(catOf(t)) ?? 999)]),
+    );
+    const cmp =
+      how === "name" ? (a, b) => key.get(a).localeCompare(key.get(b), "nl") : (a, b) => key.get(a) - key.get(b);
+    return list.slice().sort((a, b) => cmp(a, b) || byDate(a, b));
+  }
+  return list.slice().sort(byDate);
+}
 function viewTx(main) {
   const m = S.month,
     q = strip(S.fText);
   const inPeriod = S.tx.filter(t => Math.floor(t.d / 10000) === S.year && (!m || Math.floor(t.d / 100) % 100 === m));
   const unkCount = inPeriod.filter(t => catOf(t) === UNK).length;
-  const list = inPeriod.filter(
+  const list0 = inPeriod.filter(
     t =>
       (!S.fUnk || catOf(t) === UNK) &&
       (!S.fCat ||
@@ -260,6 +285,7 @@ function viewTx(main) {
           : catOf(t) === S.fCat)) &&
       (!q || (t.s || (t.s = strip(t.t))).includes(q)),
   );
+  const list = sortTx(list0, S.txSort);
   const fsel = el(
     "select",
     {
@@ -325,6 +351,30 @@ function viewTx(main) {
             "Zonder categorie (" + unkCount + ")",
           )
         : null,
+    ),
+  );
+  main.append(
+    el(
+      "div",
+      { class: "sortseg", role: "group", "aria-label": "Sorteren" },
+      el("span", { class: "of" }, "Sorteren:"),
+      TX_SORTS.map(([k, label]) =>
+        el(
+          "button",
+          {
+            class: "chip",
+            "data-sort": k,
+            "aria-pressed": (S.txSort || "new") === k,
+            onclick: () => {
+              if ((S.txSort || "new") === k) return;
+              S.txSort = k;
+              S.shown = 50;
+              goKeep();
+            },
+          },
+          label,
+        ),
+      ),
     ),
   );
   if (S.txMsg) {

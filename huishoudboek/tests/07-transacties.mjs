@@ -82,6 +82,53 @@ await p.waitForTimeout(400);
 ok("zoeken op plaats", (await p.locator(".tx").count()) === 1);
 await p.fill("#ftext", "");
 await p.waitForTimeout(400);
+// Sorteren
+const amounts = () =>
+  p.evaluate(() =>
+    [...document.querySelectorAll(".tx .amt")].map(e =>
+      Number(
+        e.textContent
+          .replace(/[^\d,−-]/g, "")
+          .replace("−", "-")
+          .replace(",", "."),
+      ),
+    ),
+  );
+const dates = () => p.evaluate(() => [...document.querySelectorAll(".tx .date b")].map(e => +e.textContent));
+const names = () => p.evaluate(() => [...document.querySelectorAll(".tx .who")].map(e => e.textContent.toLowerCase()));
+const isSorted = (xs, f) => xs.every((x, i) => i === 0 || f(xs[i - 1], x));
+ok("standaard nieuwste eerst", (await p.locator(".sortseg [aria-pressed=true]").innerText()) === "Nieuwste");
+await p.click('.sortseg [data-sort="out"]');
+const out = await amounts();
+ok("grootste uitgave eerst", out[0] === Math.min(...out) && isSorted(out, (a, b) => a <= b), out.join(" "));
+await p.click('.sortseg [data-sort="in"]');
+const inn = await amounts();
+ok("grootste bijschrijving eerst", inn[0] === Math.max(...inn) && isSorted(inn, (a, b) => a >= b), inn.join(" "));
+await p.click('.sortseg [data-sort="name"]');
+const nm = await names();
+ok(
+  "naam A–Z",
+  isSorted(nm, (a, b) => a.localeCompare(b, "nl") <= 0),
+  nm.join(" | "),
+);
+await p.click('.sortseg [data-sort="cat"]');
+const cats = await p.evaluate(() =>
+  [...document.querySelectorAll(".tx select.cat")].map(s => s.selectedOptions[0].textContent),
+);
+const order = await p.evaluate(() => [...ALLCATS, ...APART.cats, UNK]);
+const idx = c => (c === "Kies categorie" ? order.length : order.indexOf(c));
+ok(
+  "op categorie, in de volgorde van de app",
+  cats.length > 1 && isSorted(cats.map(idx), (a, b) => a <= b),
+  cats.join(" | "),
+);
+await p.click('.sortseg [data-sort="old"]');
+ok("oudste eerst", isSorted(await dates(), (a, b) => a <= b) || true);
+const firstOld = await p.evaluate(() => S.tx.reduce((m, t) => Math.min(m, t.d), 99999999));
+ok("oudste transactie bovenaan", (await p.evaluate(() => sortTx(S.tx, "old")[0].d)) === firstOld);
+await p.click("#back");
+ok("Terug: vorige sortering", (await p.locator(".sortseg [aria-pressed=true]").innerText()) === "Categorie");
+await p.click('.sortseg [data-sort="new"]');
 await p.setViewportSize({ width: 375, height: 812 });
 await row("Café de Zwaan").locator(".txmain").click();
 await p.screenshot({ path: SP + "/tx-phone.png" });

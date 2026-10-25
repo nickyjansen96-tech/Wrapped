@@ -61,7 +61,7 @@ const MONTHS_LONG = [
   "november",
   "december",
 ];
-const APP_VERSION = "37";
+const APP_VERSION = "38";
 const TABS = [
   "overzicht",
   "vergelijk",
