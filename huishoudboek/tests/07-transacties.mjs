@@ -97,21 +97,37 @@ const amounts = () =>
 const dates = () => p.evaluate(() => [...document.querySelectorAll(".tx .date b")].map(e => +e.textContent));
 const names = () => p.evaluate(() => [...document.querySelectorAll(".tx .who")].map(e => e.textContent.toLowerCase()));
 const isSorted = (xs, f) => xs.every((x, i) => i === 0 || f(xs[i - 1], x));
-ok("standaard nieuwste eerst", (await p.locator(".sortseg [aria-pressed=true]").innerText()) === "Nieuwste");
-await p.click('.sortseg [data-sort="out"]');
+const sortBy = async k => {
+  await p.click("#sort-btn");
+  await p.click('#sort-list [data-sort="' + k + '"]');
+};
+ok("standaard nieuwste eerst", (await p.locator("#sort-btn").innerText()).includes("Nieuwste"));
+ok("lijst dicht", await p.locator("#sort-list").isHidden());
+await p.click("#sort-btn");
+ok(
+  "uitgeklapt: 6 opties, vinkje bij Nieuwste",
+  (await p.locator("#sort-list button:visible").count()) === 6 &&
+    (await p.locator('#sort-list [aria-checked="true"]').innerText()).includes("✓"),
+);
+await p.keyboard.press("Escape");
+ok("Esc sluit", await p.locator("#sort-list").isHidden());
+await p.click("#sort-btn");
+await p.click(".txhead");
+ok("tik ernaast sluit", await p.locator("#sort-list").isHidden());
+await sortBy("out");
 const out = await amounts();
 ok("grootste uitgave eerst", out[0] === Math.min(...out) && isSorted(out, (a, b) => a <= b), out.join(" "));
-await p.click('.sortseg [data-sort="in"]');
+await sortBy("in");
 const inn = await amounts();
 ok("grootste bijschrijving eerst", inn[0] === Math.max(...inn) && isSorted(inn, (a, b) => a >= b), inn.join(" "));
-await p.click('.sortseg [data-sort="name"]');
+await sortBy("name");
 const nm = await names();
 ok(
   "naam A–Z",
   isSorted(nm, (a, b) => a.localeCompare(b, "nl") <= 0),
   nm.join(" | "),
 );
-await p.click('.sortseg [data-sort="cat"]');
+await sortBy("cat");
 const cats = await p.evaluate(() =>
   [...document.querySelectorAll(".tx select.cat")].map(s => s.selectedOptions[0].textContent),
 );
@@ -122,13 +138,14 @@ ok(
   cats.length > 1 && isSorted(cats.map(idx), (a, b) => a <= b),
   cats.join(" | "),
 );
-await p.click('.sortseg [data-sort="old"]');
+await sortBy("old");
 ok("oudste eerst", isSorted(await dates(), (a, b) => a <= b) || true);
 const firstOld = await p.evaluate(() => S.tx.reduce((m, t) => Math.min(m, t.d), 99999999));
 ok("oudste transactie bovenaan", (await p.evaluate(() => sortTx(S.tx, "old")[0].d)) === firstOld);
 await p.click("#back");
-ok("Terug: vorige sortering", (await p.locator(".sortseg [aria-pressed=true]").innerText()) === "Categorie");
-await p.click('.sortseg [data-sort="new"]');
+ok("Terug: vorige sortering", (await p.locator("#sort-btn").innerText()).includes("Categorie"));
+ok("knop toont keuze en lijst is dicht", await p.locator("#sort-list").isHidden());
+await sortBy("new");
 await p.setViewportSize({ width: 375, height: 812 });
 await row("Café de Zwaan").locator(".txmain").click();
 await p.screenshot({ path: SP + "/tx-phone.png" });

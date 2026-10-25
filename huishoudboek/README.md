@@ -53,7 +53,7 @@ originele bankomschrijving.
 Met **＋ Regel** maak je van een transactie een regel: de app vult het
 trefwoord voor, telt meteen hoeveel transacties de regel raakt en deelt na
 opslaan alle vergelijkbare transacties in. Zoeken werkt op naam, plaats en
-omschrijving. Met **Sorteren** zet je de lijst op *Nieuwste*, *Oudste*,
+omschrijving. Met de knop **Sorteren** klap je een lijstje uit (met een vinkje bij je keuze): *Nieuwste*, *Oudste*,
 *Grootste uitgave*, *Grootste bijschrijving*, *Naam A–Z* of *Categorie* (in de
 volgorde van de app, zonder categorie achteraan).
 

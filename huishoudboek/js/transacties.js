@@ -271,6 +271,87 @@ function sortTx(list, how) {
   }
   return list.slice().sort(byDate);
 }
+// Eén knop "Sorteren: …" die een lijstje uitklapt; de gekozen optie heeft een vinkje.
+function sortMenu() {
+  if (sortMenu.cleanup) sortMenu.cleanup();
+  const cur = S.txSort || "new",
+    open = !!S.sortOpen;
+  const close = () => {
+    S.sortOpen = false;
+    render();
+  };
+  const list = el(
+    "div",
+    { class: "sortlist", id: "sort-list", role: "menu", hidden: !open },
+    TX_SORTS.map(([k, label]) =>
+      el(
+        "button",
+        {
+          role: "menuitemradio",
+          "aria-checked": k === cur,
+          "data-sort": k,
+          onclick: () => {
+            S.sortOpen = false;
+            if (k === cur) return render();
+            S.txSort = k;
+            S.shown = 50;
+            goKeep();
+          },
+        },
+        el("span", { class: "tick", "aria-hidden": "true" }, k === cur ? "✓" : ""),
+        label,
+      ),
+    ),
+  );
+  if (open)
+    setTimeout(() => {
+      // Dicht bij een tik ernaast of Esc; bij de volgende weergave worden deze luisteraars weer opgeruimd.
+      const off = e => {
+        if (!e.target.closest || !e.target.closest(".sortmenu")) close();
+      };
+      const esc = e => {
+        if (e.key === "Escape") {
+          close();
+          $("#sort-btn")?.focus();
+        }
+      };
+      document.addEventListener("click", off, true);
+      document.addEventListener("keydown", esc, true);
+      sortMenu.cleanup = () => {
+        document.removeEventListener("click", off, true);
+        document.removeEventListener("keydown", esc, true);
+        sortMenu.cleanup = null;
+      };
+      // Past de lijst rechts niet in beeld, dan klapt hij naar links uit (rechts uitgelijnd met de knop).
+      if (list.getBoundingClientRect().right > document.documentElement.clientWidth - 8) {
+        list.style.left = "auto";
+        list.style.right = "0";
+      }
+      list.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
+    });
+  return el(
+    "div",
+    { class: "sortmenu" },
+    el(
+      "button",
+      {
+        class: "sortbtn",
+        id: "sort-btn",
+        "aria-haspopup": "true",
+        "aria-expanded": open,
+        "aria-controls": "sort-list",
+        onclick: () => {
+          S.sortOpen = !open;
+          render();
+        },
+      },
+      el("span", { class: "of" }, "Sorteren: "),
+      TX_SORTS.find(([k]) => k === cur)[1],
+      el("span", { class: "chev", "aria-hidden": "true" }, " ▾"),
+    ),
+    list,
+  );
+}
 function viewTx(main) {
   const m = S.month,
     q = strip(S.fText);
@@ -335,6 +416,7 @@ function viewTx(main) {
         },
       }),
       fsel,
+      sortMenu(),
       unkCount || S.fUnk
         ? el(
             "button",
@@ -351,30 +433,6 @@ function viewTx(main) {
             "Zonder categorie (" + unkCount + ")",
           )
         : null,
-    ),
-  );
-  main.append(
-    el(
-      "div",
-      { class: "sortseg", role: "group", "aria-label": "Sorteren" },
-      el("span", { class: "of" }, "Sorteren:"),
-      TX_SORTS.map(([k, label]) =>
-        el(
-          "button",
-          {
-            class: "chip",
-            "data-sort": k,
-            "aria-pressed": (S.txSort || "new") === k,
-            onclick: () => {
-              if ((S.txSort || "new") === k) return;
-              S.txSort = k;
-              S.shown = 50;
-              goKeep();
-            },
-          },
-          label,
-        ),
-      ),
     ),
   );
   if (S.txMsg) {

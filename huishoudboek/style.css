@@ -2281,19 +2281,73 @@ a.btn {
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
-/* sorteren van transacties */
-.sortseg {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  margin-top: -4px;
+/* sorteren van transacties: één knop met een uitklaplijst */
+.sortmenu {
+  position: relative;
 }
-.sortseg > * {
-  flex: none;
+.sortbtn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 0.5px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-height: 38px;
+  cursor: pointer;
+  white-space: nowrap;
 }
-.sortseg .of {
-  font-size: 13px;
+.sortbtn .of {
+  font-weight: 400;
   color: var(--muted);
-  margin-right: 2px;
+}
+.sortbtn .chev {
+  color: var(--muted);
+  font-size: 11px;
+}
+.sortbtn[aria-expanded="true"] {
+  border-color: var(--accent);
+}
+.sortlist {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 25;
+  display: grid;
+  min-width: 15rem;
+  padding: 6px;
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.16),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08);
+}
+.sortlist[hidden] {
+  display: none;
+}
+.sortlist button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  padding: 10px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.sortlist button:hover {
+  background: var(--sunk);
+}
+.sortlist button[aria-checked="true"] {
+  color: var(--accent);
+  font-weight: 600;
+}
+.sortlist .tick {
+  width: 1.1em;
+  color: var(--accent);
 }
