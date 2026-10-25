@@ -214,6 +214,7 @@ function resetData() {
     rFilter: "",
     importMsg: "",
     backupMsg: "",
+    claudeMsg: null,
     ai: { text: "", sugg: null, msg: "" },
     editBudget: false,
     showEmpty: false,

@@ -158,6 +158,12 @@ de app onthoudt welke gebruiker het laatst open stond.
 - Onder *Importeren* maak je per profiel een JSON-back-up en zet je die terug,
   bijvoorbeeld om naar een ander toestel over te stappen.
 - Een back-up-bestand (`.json`) kun je ook gewoon in het importvak slepen.
+- **✨ Naar Claude** (onder *Importeren*) stuurt de back-up en een CSV met al
+  je transacties en hun categorie, met een vraag erbij, naar Claude. Op iPad
+  en telefoon opent het deelmenu (kies de Claude-app); op de computer worden
+  beide bestanden gedownload, staat de vraag gekopieerd en open je Claude met
+  de knop. De app kan niet zelf in je Claude-account schrijven. Let op: de
+  back-up bevat ook rekeningnummers uit de omschrijvingen; de CSV niet.
 
 ## Bestanden
 

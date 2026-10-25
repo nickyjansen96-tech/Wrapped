@@ -114,16 +114,27 @@ function backupData() {
     months: Object.fromEntries(Object.entries(S.months).map(([k, rows]) => [k, rows.map(txStore)])),
   };
 }
+const backupName = ext =>
+  "huishoudboek-" +
+  (profileName()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "gebruiker") +
+  "-" +
+  new Date().toISOString().slice(0, 10) +
+  ext;
+function downloadBlob(blob, name) {
+  const a = el("a", { href: URL.createObjectURL(blob), download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
 async function exportBackup() {
   flushSaves();
-  const slug =
-    profileName()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "") || "gebruiker";
-  const name = "huishoudboek-" + slug + "-" + new Date().toISOString().slice(0, 10) + ".json";
+  const name = backupName(".json");
   const blob = new Blob([JSON.stringify(backupData())], { type: "application/json" });
   try {
     const file = new File([blob], name, { type: "application/json" });
@@ -136,12 +147,75 @@ async function exportBackup() {
   } catch (e) {
     if (e && e.name === "AbortError") return;
   }
-  const a = el("a", { href: URL.createObjectURL(blob), download: name });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  downloadBlob(blob, name);
   S.backupMsg = "Back-up opgeslagen als " + name + ".";
+  render();
+}
+// Back-up naar Claude: de back-up (om terug te zetten) en een leesbaar overzicht van alle transacties met categorie
+// (CSV), met een vraag erbij. Een web-app kan niet zelf in je Claude-account schrijven: op iPad en telefoon deel je de
+// bestanden met de Claude-app, op de computer worden ze gedownload en sleep je ze in een gesprek op claude.ai.
+function claudeCsv() {
+  const q = v => (/[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v);
+  const date = d =>
+    Math.floor(d / 10000) +
+    "-" +
+    String(Math.floor(d / 100) % 100).padStart(2, "0") +
+    "-" +
+    String(d % 100).padStart(2, "0");
+  const rows = S.tx
+    .slice()
+    .sort((a, b) => a.d - b.d)
+    .map(t => {
+      const [name, desc] = partyOf(t);
+      return [
+        date(t.d),
+        t.a.toFixed(2),
+        name,
+        txType(t.t),
+        (desc || cleanDesc(t.t)).replace(/\s+/g, " ").trim(),
+        catOf(t),
+        counted(t) ? "ja" : "nee",
+      ]
+        .map(v => q(String(v)))
+        .join(";");
+    });
+  return ["datum;bedrag;naam;soort;omschrijving;categorie;telt mee", ...rows].join("\n");
+}
+const claudeText = () =>
+  "Hierbij mijn huishoudboek (profiel " +
+  profileName() +
+  "): een back-up (JSON, om later terug te zetten in de app) en al mijn transacties met categorie (CSV). " +
+  "In de CSV: per transactie datum, bedrag (min = uitgave), naam, soort betaling, omschrijving, categorie en of hij meetelt " +
+  "(declaraties en 'Niet meetellen' tellen niet mee in mijn overzichten). Budgetten staan in de JSON onder budgets[jaar][categorie]: " +
+  "base is het bedrag per maand, m bevat afwijkende maanden. Vat kort samen hoe ik ervoor sta; daarna stel ik je vragen.";
+async function backupToClaude() {
+  flushSaves();
+  const json = new File([JSON.stringify(backupData())], backupName(".json"), { type: "application/json" }),
+    csv = new File(["\ufeff" + claudeCsv()], backupName("-transacties.csv"), { type: "text/csv" }),
+    text = claudeText();
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [json, csv] }) && matchMedia("(pointer:coarse)").matches) {
+      await navigator.share({ files: [json, csv], text, title: "Huishoudboek " + profileName() });
+      S.claudeMsg = { text: "Gedeeld. Kies je de Claude-app, dan staan de bestanden in een nieuw gesprek." };
+      render();
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === "AbortError") return;
+  }
+  downloadBlob(json, json.name);
+  downloadBlob(csv, csv.name);
+  const copied = await copyText(text);
+  S.claudeMsg = {
+    text:
+      "Twee bestanden gedownload: " +
+      json.name +
+      " en " +
+      csv.name +
+      ". Open Claude, sleep ze in een nieuw gesprek" +
+      (copied ? " en plak de vraag (staat al gekopieerd)." : " en typ je vraag."),
+    link: true,
+  };
   render();
 }
 async function restoreBackup(file) {
@@ -289,6 +363,40 @@ function viewImport(main) {
         binp,
       ),
       S.backupMsg ? el("div", { class: "note info", role: "status" }, S.backupMsg) : null,
+    ),
+    el(
+      "div",
+      { class: "card", id: "claude-card" },
+      el("h2", {}, "Back-up naar Claude"),
+      el(
+        "p",
+        { class: "prose" },
+        "Stuur je back-up en een overzicht van al je transacties met categorie naar Claude, om vragen over je geldzaken te stellen. " +
+          "Let op: de back-up bevat al je transacties, ook rekeningnummers in de omschrijving.",
+      ),
+      el(
+        "div",
+        { class: "tools" },
+        el(
+          "button",
+          { class: "btn pri", id: "claude-btn", disabled: !S.tx.length, onclick: backupToClaude },
+          "✨ Naar Claude",
+        ),
+      ),
+      S.claudeMsg
+        ? el(
+            "div",
+            { class: "note info", role: "status" },
+            el("span", {}, S.claudeMsg.text),
+            S.claudeMsg.link
+              ? el(
+                  "a",
+                  { class: "btn sm", href: "https://claude.ai/new", target: "_blank", rel: "noopener" },
+                  "Claude openen ↗",
+                )
+              : null,
+          )
+        : null,
     ),
   );
   const keys = Object.keys(S.months)

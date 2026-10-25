@@ -61,7 +61,7 @@ const MONTHS_LONG = [
   "november",
   "december",
 ];
-const APP_VERSION = "34";
+const APP_VERSION = "35";
 const TABS = [
   "overzicht",
   "vergelijk",
@@ -93,6 +93,7 @@ const S = {
   rFilter: "",
   importMsg: "",
   backupMsg: "",
+  claudeMsg: null,
   ai: { text: "", sugg: null, msg: "" },
 };
 const $ = s => document.querySelector(s);
