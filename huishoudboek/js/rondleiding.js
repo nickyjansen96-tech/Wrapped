@@ -12,7 +12,7 @@ const TOUR = [
   {
     target: "#profiles",
     title: "Wie ben jij?",
-    text: "Kies hier je naam. Iedere gebruiker heeft eigen transacties, budgetten en regels. Met + voeg je gebruikers toe of pas je ze aan.",
+    text: "Kies hier je naam. Iedere gebruiker heeft eigen transacties, budgetten en regels. Met ✎ wijzig je een naam of voeg je iemand toe.",
   },
   {
     target: "#tabs",
@@ -41,13 +41,13 @@ const TOUR = [
     tab: "overzicht",
     target: "#budget-btn",
     title: "4. Vul je budget in",
-    text: "In een tabel met een rij per categorie en een kolom per maand. Bij Elke maand vul je één bedrag in voor het hele jaar.",
+    text: "Klap Budget bewerken uit: een tabel met een rij per categorie en een kolom per maand. Bij Elke maand vul je één bedrag in voor het hele jaar.",
   },
   {
     tab: "overzicht",
     target: ".hero",
     title: "5. Zie hoe je ervoor staat",
-    text: "Bovenaan staat wat er over is in de gekozen maand of het jaar. Daaronder per categorie wat je uitgaf ten opzichte van je budget; rood betekent erover. Met Vergelijk per maand zie je per post en per maand hoe je op budget zit.",
+    text: "Bovenaan staat wat er over is in de gekozen maand of het jaar. Daaronder per categorie wat je uitgaf ten opzichte van je budget; rood betekent erover. Klap Budget vs werkelijk uit om per post en per maand te zien hoe je op budget zit.",
   },
   {
     tab: "importeren",

@@ -207,7 +207,8 @@ function summaryPrompt(ym) {
 }
 
 function goSummary() {
-  S.tab = "samenvatting";
+  S.tab = "overzicht";
+  S.foldSum = true;
   S.sum = { ym: 0, msg: "", show: false };
   go();
 }

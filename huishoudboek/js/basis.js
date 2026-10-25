@@ -61,7 +61,7 @@ const MONTHS_LONG = [
   "november",
   "december",
 ];
-const APP_VERSION = "35";
+const APP_VERSION = "36";
 const TABS = [
   "overzicht",
   "vergelijk",
@@ -82,6 +82,7 @@ const S = {
   overrides: {},
   budgets: {},
   wealth: {},
+  goals: [],
   tab: "overzicht",
   year: null,
   month: 0,

@@ -180,11 +180,7 @@ function viewBudgetEdit(main) {
           "button",
           {
             class: "btn pri",
-            onclick: () => {
-              S.editBudget = false;
-              render();
-              window.scrollTo(0, 0);
-            },
+            onclick: () => toggleFold("editBudget", false),
           },
           "Klaar",
         ),
@@ -199,10 +195,10 @@ function viewBudgetEdit(main) {
             class: "btn sm",
             onclick: () => {
               S.editBudget = false;
-              goCompare();
+              toggleFold("foldCmp", true);
             },
           },
-          "Vergelijk per maand",
+          "Budget vs werkelijk",
         ),
       ),
     ),

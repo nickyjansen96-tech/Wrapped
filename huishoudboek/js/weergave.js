@@ -12,7 +12,7 @@ function render() {
   $("#back").hidden = !(history.state && history.state.n > 0);
   // De budgettabel krijgt de volle schermbreedte, zodat alle maanden ernaast passen.
   for (const w of document.querySelectorAll(".wrap"))
-    w.classList.toggle("wide", (S.tab === "overzicht" && !!S.editBudget) || S.tab === "vergelijk");
+    w.classList.toggle("wide", (S.tab === "overzicht" && (!!S.editBudget || !!S.foldCmp)) || S.tab === "vergelijk");
   renderProfiles();
   renderRail();
   const main = $("#main");
@@ -32,6 +32,12 @@ function render() {
     samenvatting: viewSummary,
   })[S.tab](main);
 }
+function openUsers() {
+  if (S.tab !== "gebruikers") {
+    S.tab = "gebruikers";
+    go();
+  }
+}
 function renderProfiles() {
   const box = $("#profiles");
   box.replaceChildren(
@@ -41,7 +47,13 @@ function renderProfiles() {
       ...PROFILES.map(p =>
         el(
           "button",
-          { class: "seg", "aria-pressed": p.id === profile, title: p.name, onclick: () => switchProfile(p.id) },
+          {
+            class: "seg",
+            "aria-pressed": p.id === profile,
+            title: p.id === profile ? p.name + " · tik om profielen te beheren" : p.name,
+            // Nog eens op je eigen profiel tikken opent het beheer (naam wijzigen, toevoegen, verwijderen).
+            onclick: () => (p.id === profile ? openUsers() : switchProfile(p.id)),
+          },
           p.name,
         ),
       ),
@@ -51,16 +63,11 @@ function renderProfiles() {
       {
         class: "seg add",
         "aria-pressed": S.tab === "gebruikers",
-        "aria-label": "Gebruikers beheren",
-        title: "Gebruikers beheren",
-        onclick: () => {
-          if (S.tab !== "gebruikers") {
-            S.tab = "gebruikers";
-            go();
-          }
-        },
+        "aria-label": "Profielen beheren",
+        title: "Profielen beheren: naam wijzigen, toevoegen of verwijderen",
+        onclick: openUsers,
       },
-      "+",
+      "✎",
     ),
   );
 }
@@ -105,7 +112,7 @@ function renderRail() {
       render();
     }),
   );
-  if (ov && (S.editBudget || S.tab === "vergelijk")) return;
+  if (S.tab === "vergelijk") return;
   if (S.tab === "vermogen") return;
   const { cnt } = totals(S.year);
   rail.append(

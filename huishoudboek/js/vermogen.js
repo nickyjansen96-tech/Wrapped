@@ -169,6 +169,7 @@ function wealthChart(D) {
   return wrap;
 }
 function viewWealth(main) {
+  main.append(goalsCard());
   if (!S.tx.length) {
     main.append(el("div", { class: "empty" }, "Nog geen transacties. Lees eerst je bankexport in bij Importeren."));
     return;

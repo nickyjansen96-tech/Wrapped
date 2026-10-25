@@ -14,6 +14,9 @@ function viewState(n) {
     fUnk: S.fUnk,
     fText: S.fText,
     cmpQ: S.cmpQ || 0,
+    editBudget: !!S.editBudget,
+    foldCmp: !!S.foldCmp,
+    foldSum: !!S.foldSum,
     scroll: 0,
   };
 }
@@ -24,11 +27,23 @@ function restoreView(st) {
     fUnk: !!st.fUnk,
     fText: st.fText || "",
     cmpQ: st.cmpQ || 0,
+    editBudget: !!st.editBudget,
+    foldCmp: !!st.foldCmp,
+    foldSum: !!st.foldSum,
     shown: 50,
     ruleFor: null,
   });
   if (st.year != null) S.year = st.year;
   if (st.month != null) S.month = st.month;
+}
+// Zelfde pagina, andere stand (uitklappen, kwartaal): wel in de geschiedenis, maar blijf op dezelfde plek staan.
+function goKeep() {
+  try {
+    const prev = history.state || viewState(0);
+    history.replaceState({ ...prev, scroll: window.scrollY }, "");
+    history.pushState(viewState((prev.n || 0) + 1), "", "#" + S.tab);
+  } catch (e) {}
+  render();
 }
 function go() {
   try {

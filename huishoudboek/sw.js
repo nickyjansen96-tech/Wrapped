@@ -1,6 +1,6 @@
 // Bewaart de app-bestanden zodat het Huishoudboek ook offline opent.
 // Verhoog VERSION bij elke wijziging aan de bestanden hieronder.
-const VERSION = "hhb-v35";
+const VERSION = "hhb-v36";
 const FILES = [
   "./",
   "index.html",
@@ -17,6 +17,7 @@ const FILES = [
   "js/vergelijk.js",
   "js/samenvatting.js",
   "js/vermogen.js",
+  "js/spaardoelen.js",
   "js/banken.js",
   "js/importeren.js",
   "js/gebruikers.js",

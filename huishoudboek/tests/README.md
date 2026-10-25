@@ -31,6 +31,7 @@ PLAYWRIGHT_MODULE=/pad/naar/playwright/index.mjs CHROMIUM_PATH=/pad/naar/chromiu
 | 11-samenvatting | Maandsamenvatting: knoppen, maand kiezen, export nagerekend, geen rekeningnummers, kopiëren en bestand |
 | 12-apart | Declaraties en niet meetellen: markeren, buiten de overzichten, openstaand bedrag, filter, regels, AI, bewaren |
 | 13-claude | Back-up naar Claude: downloads of deelmenu, CSV nagerekend, vraag gekopieerd |
+| 14-uitklap-profiel-spaardoel | Uitklappen op het overzicht (ook Terug), profielnaam wijzigen, spaardoelen met koppeling en back-up |
 | 10-banken | ING, Rabobank en bunq: herkenning, bedragen, naam, plaats en soort betaling, dubbelen, opslaan |
 
 De bestanden in `fixtures/` zijn verzonnen voorbeeldtransacties, geen echte

@@ -1,5 +1,5 @@
 "use strict";
-// Gebruikers toevoegen, hernoemen en verwijderen.
+// Profielen (gebruikers) toevoegen, een andere naam geven en verwijderen.
 /* ---------- gebruikers ---------- */
 function viewUsers(main) {
   const nin = el("input", {
@@ -28,7 +28,7 @@ function viewUsers(main) {
     el(
       "div",
       { class: "card" },
-      el("h2", {}, "Gebruiker toevoegen"),
+      el("h2", {}, "Profiel toevoegen"),
       el("p", { class: "prose" }, "Iedere gebruiker heeft eigen transacties, regels, budgetten en vermogen."),
       el("div", { class: "addrule" }, nin, el("button", { class: "btn pri", onclick: add }, "Toevoegen")),
     ),
@@ -40,31 +40,81 @@ function viewUsers(main) {
     el(
       "div",
       { class: "ghead" },
-      el("span", {}, PROFILES.length + (PROFILES.length === 1 ? " gebruiker" : " gebruikers")),
+      el("span", {}, PROFILES.length + (PROFILES.length === 1 ? " profiel" : " profielen")),
       el("span", { class: "of" }, "op dit toestel"),
     ),
   );
   for (const p of PROFILES) {
     const cur = p.id === profile,
       n = userKeys(p.id).filter(k => k.includes(":tx-")).length;
-    const name = el("input", {
-      class: "txt",
-      value: p.name,
-      "aria-label": "Naam van " + p.name,
-      onchange: e => {
-        const v = e.target.value.trim();
-        if (!v || nameTaken(v, p.id)) {
-          S.userMsg = v ? "Er is al een gebruiker met de naam " + v + "." : "Een naam mag niet leeg zijn.";
-          render();
-          return;
-        }
-        p.name = v;
-        saveUsers();
-        S.userMsg = "";
-        if (cur) document.title = "Huishoudboek · " + v;
+    const rename = v => {
+      v = v.trim();
+      if (!v || nameTaken(v, p.id)) {
+        S.userMsg = v ? "Er is al een gebruiker met de naam " + v + "." : "Een naam mag niet leeg zijn.";
         render();
-      },
-    });
+        return;
+      }
+      const old = p.name;
+      p.name = v;
+      saveUsers();
+      S.userMsg = old === v ? "" : old + " heet nu " + v + ".";
+      S.editUser = null;
+      if (cur) document.title = "Huishoudboek · " + v;
+      render();
+    };
+    let name;
+    if (S.editUser === p.id) {
+      const inp = el("input", {
+        class: "txt",
+        id: "rename-" + p.id,
+        value: p.name,
+        autocomplete: "off",
+        "aria-label": "Nieuwe naam voor " + p.name,
+        onkeydown: e => {
+          if (e.key === "Enter") rename(e.target.value);
+          if (e.key === "Escape") {
+            S.editUser = null;
+            render();
+          }
+        },
+      });
+      setTimeout(() => inp.focus());
+      name = el(
+        "span",
+        { class: "uedit" },
+        inp,
+        el("button", { class: "btn sm pri", onclick: () => rename(inp.value) }, "Opslaan"),
+        el(
+          "button",
+          {
+            class: "btn sm",
+            onclick: () => {
+              S.editUser = null;
+              render();
+            },
+          },
+          "Annuleren",
+        ),
+      );
+    } else
+      name = el(
+        "span",
+        { class: "uname" },
+        el("b", {}, p.name),
+        el(
+          "button",
+          {
+            class: "linkbtn",
+            "aria-label": "Naam van " + p.name + " wijzigen",
+            onclick: () => {
+              S.editUser = p.id;
+              S.userMsg = "";
+              render();
+            },
+          },
+          "✎ Naam wijzigen",
+        ),
+      );
     sec.append(
       el(
         "div",

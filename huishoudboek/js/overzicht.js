@@ -37,8 +37,39 @@ const kinds = fn => ({
 });
 const anyBudget = Y => ALLCATS.some(c => budgetOf(Y, c, 0) > 0);
 function viewOverview(main) {
-  if (S.editBudget) viewBudgetEdit(main);
-  else viewStatus(main);
+  viewStatus(main);
+}
+// Uitklapbare onderdelen onder het overzicht: budget bewerken, budget vs werkelijk en de maandsamenvatting.
+// Dicht staat er alleen een knop; open komt de inhoud eronder. Open of dicht komt in de geschiedenis (Terug).
+const FOLDS = [
+  { key: "editBudget", id: "budget-btn", view: m => viewBudgetEdit(m) },
+  { key: "foldCmp", id: "compare-btn", view: m => viewCompare(m, true) },
+  { key: "foldSum", id: "summary-btn", view: m => viewSummary(m) },
+];
+function toggleFold(key, open = !S[key]) {
+  S[key] = open;
+  goKeep();
+  const f = FOLDS.find(f => f.key === key);
+  if (open && f) document.getElementById(f.id)?.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+function foldBar(f, label, sub) {
+  const open = !!S[f.key];
+  const sec = el(
+    "section",
+    { class: "fold" + (open ? " open" : "") },
+    el(
+      "button",
+      { class: "foldbtn", id: f.id, "aria-expanded": open, onclick: () => toggleFold(f.key) },
+      el("span", { class: "ft" }, el("b", {}, label), sub ? el("span", { class: "of" }, sub) : null),
+      el("span", { class: "chev", "aria-hidden": "true" }, "›"),
+    ),
+  );
+  if (open) {
+    const body = el("div", { class: "foldbody" });
+    f.view(body);
+    sec.append(body);
+  }
+  return sec;
 }
 
 function viewStatus(main) {
@@ -72,25 +103,6 @@ function viewStatus(main) {
           el("div", { class: "l" }, "Over in " + per),
           el("div", { class: "big " + (rest < -0.5 ? "neg" : "pos") }, eur0.format(rest)),
         ),
-        el(
-          "div",
-          { class: "herobtns" },
-          el(
-            "button",
-            {
-              class: "btn" + (hasB ? "" : " pri"),
-              id: "budget-btn",
-              onclick: () => {
-                S.editBudget = true;
-                render();
-                window.scrollTo(0, 0);
-              },
-            },
-            hasB ? "Budget bewerken" : "Budget invullen",
-          ),
-          hasB ? el("button", { class: "btn", id: "compare-btn", onclick: goCompare }, "Vergelijk per maand") : null,
-          S.tx.length ? summaryButton() : null,
-        ),
       ),
       el(
         "div",
@@ -99,6 +111,15 @@ function viewStatus(main) {
         stat("Uitgaven", A.uit, B.uit),
         stat("Gespaard", A.sp, B.sp),
       ),
+    ),
+  );
+  main.append(
+    el(
+      "div",
+      { class: "folds" },
+      foldBar(FOLDS[0], hasB ? "Budget bewerken" : "Budget invullen", "Per categorie en maand, in een tabel"),
+      hasB ? foldBar(FOLDS[1], "Budget vs werkelijk", "Verschil per post en maand, per jaar of kwartaal") : null,
+      S.tx.length ? foldBar(FOLDS[2], "✨ Maandsamenvatting", "Laat een AI-chat je maand samenvatten") : null,
     ),
   );
   if (!S.tx.length) {

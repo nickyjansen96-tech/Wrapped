@@ -8,10 +8,6 @@ const fmtCell = (v, signed) => {
   const n = eur0.format(Math.abs(v)).replace("€", "").trim();
   return signed ? (v > 0.5 ? "+" : v < -0.5 ? "−" : "") + n : (v < -0.5 ? "−" : "") + n;
 };
-function goCompare() {
-  S.tab = "vergelijk";
-  go();
-}
 // Maanden in de gekozen periode (0 = heel jaar, 1–4 = kwartaal) en welke daarvan transacties hebben.
 function cmpPeriod(has) {
   const Q = S.cmpQ || 0,
@@ -41,7 +37,7 @@ function quarterSwitch() {
           onclick: () => {
             if ((S.cmpQ || 0) !== q) {
               S.cmpQ = q;
-              go();
+              goKeep();
             }
           },
         },
@@ -63,7 +59,7 @@ function cmpTd(c, tip, cls) {
       : el("span", { title: t }, txt),
   );
 }
-function viewCompare(main) {
+function viewCompare(main, inline) {
   const Y = S.year,
     { T, cnt, unkN } = totals(Y);
   const has = k => cnt[k] > 0;
@@ -139,7 +135,7 @@ function viewCompare(main) {
       el(
         "div",
         {},
-        el("h2", {}, "Budget vs werkelijk " + Y),
+        inline ? null : el("h2", {}, "Budget vs werkelijk " + Y),
         el(
           "div",
           { class: "of" },
@@ -147,23 +143,25 @@ function viewCompare(main) {
             (P.partial ? " · = nog geen transacties ingelezen." : ""),
         ),
       ),
-      el(
-        "div",
-        { class: "tools" },
-        S.tx.length ? summaryButton("btn sm") : null,
-        el(
-          "button",
-          {
-            class: "btn sm",
-            onclick: () => {
-              S.tab = "overzicht";
-              S.editBudget = true;
-              go();
-            },
-          },
-          "Budget bewerken",
-        ),
-      ),
+      inline
+        ? null
+        : el(
+            "div",
+            { class: "tools" },
+            S.tx.length ? summaryButton("btn sm") : null,
+            el(
+              "button",
+              {
+                class: "btn sm",
+                onclick: () => {
+                  S.tab = "overzicht";
+                  S.editBudget = true;
+                  go();
+                },
+              },
+              "Budget bewerken",
+            ),
+          ),
     ),
     quarterSwitch(),
   );

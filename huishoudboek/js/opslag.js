@@ -167,12 +167,14 @@ const saveOverrides = () => save("overrides", () => ({ map: S.overrides }));
 const saveRules = () => save("rules", () => ({ list: S.rules.map(r => ({ k: r.k, c: r.c })) }));
 const saveWealth = () => save("wealth", () => ({ years: S.wealth }));
 const saveBudgets = () => save("budgets", () => ({ years: S.budgets }));
+const saveGoals = () => save("goals", () => ({ list: S.goals }));
 const saveMonth = key => save("tx-" + key, () => ({ rows: S.months[key].map(txStore) }));
 const saveAll = () => {
   saveOverrides();
   saveRules();
   saveWealth();
   saveBudgets();
+  saveGoals();
   for (const k of Object.keys(S.months)) saveMonth(k);
 };
 
@@ -182,6 +184,18 @@ function loadDoc(id, v) {
   else if (id === "overrides") S.overrides = Object.assign({}, v.map || {});
   else if (id === "wealth") S.wealth = JSON.parse(JSON.stringify(v.years || {}));
   else if (id === "budgets") S.budgets = JSON.parse(JSON.stringify(v.years || {}));
+  else if (id === "goals")
+    S.goals = (Array.isArray(v.list) ? v.list : [])
+      .filter(g => g && g.name)
+      .map(g => ({
+        id: String(g.id || "g" + Math.random().toString(36).slice(2, 8)),
+        name: String(g.name),
+        target: Math.max(0, +g.target || 0),
+        start: +g.start || 0,
+        since: +g.since || 0,
+        date: /^\d{4}-\d{2}$/.test(g.date) ? g.date : "",
+        key: String(g.key || ""),
+      }));
   else if (id.startsWith("tx-"))
     S.months[id.slice(3)] = (v.rows || [])
       .map(r => {
@@ -202,6 +216,7 @@ function resetData() {
   S.overrides = {};
   S.budgets = {};
   S.wealth = {};
+  S.goals = [];
   S.tx = [];
   Object.assign(S, {
     year: null,
@@ -217,6 +232,9 @@ function resetData() {
     claudeMsg: null,
     ai: { text: "", sugg: null, msg: "" },
     editBudget: false,
+    foldCmp: false,
+    foldSum: false,
+    goalEdit: null,
     showEmpty: false,
     txOpen: null,
     txMsg: "",

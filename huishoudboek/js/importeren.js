@@ -111,6 +111,7 @@ function backupData() {
     overrides: S.overrides,
     budgets: S.budgets,
     wealth: S.wealth,
+    goals: S.goals,
     months: Object.fromEntries(Object.entries(S.months).map(([k, rows]) => [k, rows.map(txStore)])),
   };
 }
@@ -256,6 +257,7 @@ async function restoreBackup(file) {
   loadDoc("overrides", { map: v.overrides || {} });
   loadDoc("budgets", { years: v.budgets || {} });
   loadDoc("wealth", { years: v.wealth || {} });
+  loadDoc("goals", { list: v.goals || [] });
   for (const [k, rows] of Object.entries(v.months))
     if (/^\d{4}-\d{2}$/.test(k) && Array.isArray(rows)) loadDoc("tx-" + k, { rows });
   indexTx();

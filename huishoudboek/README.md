@@ -51,7 +51,10 @@ omschrijving.
 
 ## Overzicht en budget
 
-Kies bovenaan een jaar en *Heel jaar* of een maand.
+Kies bovenaan een jaar en *Heel jaar* of een maand. Onder het overzicht staan
+drie knoppen die uitklappen: **Budget bewerken**, **Budget vs werkelijk** en
+**✨ Maandsamenvatting**. Dicht zie je alleen de knop; open staat de inhoud
+eronder. *Terug* klapt weer in.
 
 - **Bekijken:** bovenaan wat er over is (alle transacties, ook die zonder
   categorie), met inkomsten, uitgaven en gespaard tegenover het budget.
@@ -67,7 +70,7 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   met je gemiddelde, budget van vorig jaar overnemen, wissen.
 - Bij *Heel jaar* vergelijkt de app met het budget van de maanden waarover je
   transacties hebt ingelezen.
-- **Vergelijk per maand:** per hoofdcategorie (Inkomsten, Vaste lasten,
+- **Budget vs werkelijk:** per hoofdcategorie (Inkomsten, Vaste lasten,
   Variabele uitgaven, Reserveringen, Sparen en beleggen) een blok met per
   post (Wonen, Boodschappen, …) het verschil met het budget en daaronder
   het totale verschil van de categorie, met de maanden als kolommen; alleen
@@ -83,6 +86,16 @@ Kies bovenaan een jaar en *Heel jaar* of een maand.
   Tik op een bedrag voor de transacties van die categorie of post in die
   maand (bij Transacties kun je ook zelf filteren op bijv. *Alle vaste
   lasten*).
+
+## Spaardoelen
+
+Onder **Sparen en vermogen** beheer je je spaardoelen: met **＋ Spaardoel**
+geef je een naam, doelbedrag, wat je al gespaard hebt en eventueel de maand
+waarin je klaar wilt zijn. De app toont de voortgang en hoeveel je per maand
+nog moet sparen, en onderaan wat al je doelen samen per maand vragen tegenover
+je budget voor *Spaardoelen*. Koppel je een trefwoord (bijv. de naam van je
+spaarrekening), dan tellen overboekingen met dat trefwoord vanaf het aanmaken
+van het doel vanzelf mee. Spaardoelen staan in de back-up.
 
 ## Declaraties en niet meetellen
 
@@ -142,8 +155,9 @@ budget, overzicht, back-up). Met de **?**-knop naast de titel, of onderaan
 
 ## Gebruikers
 
-Rechtsboven kies je de gebruiker; met **+** beheer je ze: gebruikers
-toevoegen, hernoemen en verwijderen (met al hun gegevens). Iedere gebruiker
+Rechtsboven kies je de gebruiker (het profiel). Met **✎**, of door nog eens
+op je eigen naam te tikken, beheer je ze: **✎ Naam wijzigen**, profielen
+toevoegen en verwijderen (met al hun gegevens). Iedere gebruiker
 heeft eigen transacties, regels, budgetten, vermogen en back-ups. De lijst
 begint met Nicky en Heleen en staat in `localStorage` onder `hhb-gebruikers`;
 de app onthoudt welke gebruiker het laatst open stond.
@@ -174,7 +188,7 @@ de app onthoudt welke gebruiker het laatst open stond.
   `weergave` (kop, jaar- en maandkeuze) · `transacties` · `regels` (incl. AI) ·
   `overzicht` · `budget` (budgettabel) · `vergelijk` (budget vs werkelijk) ·
   `samenvatting` (maandsamenvatting door AI) ·
-  `vermogen` · `banken` (bankbestanden herkennen) ·
+  `vermogen` · `spaardoelen` · `banken` (bankbestanden herkennen) ·
   `importeren` (inlezen en back-ups) · `gebruikers` ·
   `rondleiding` · `start` (navigatie en opstarten)
 - `sw.js` — service worker voor offline gebruik; verhoog `VERSION` (en
