@@ -1,4 +1,4 @@
-import { chromium, LAUNCH, URL_APP, FX } from "./lib.mjs";
+import { chromium, LAUNCH, URL_APP, FX, goTab } from "./lib.mjs";
 const SP = process.argv[2] || ".";
 const b = await chromium.launch(LAUNCH);
 const ctx = await b.newContext({ viewport: { width: 820, height: 1180 }, acceptDownloads: true });
@@ -20,7 +20,7 @@ const ok = (name, cond, info = "") => {
   if (!cond) fails++;
 };
 const tab = async t => {
-  await p.click('#tabs button[data-tab="' + t + '"]');
+  await goTab(p, t);
   await p.waitForTimeout(60);
 };
 const S = f => p.evaluate(f);

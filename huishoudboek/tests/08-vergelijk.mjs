@@ -1,4 +1,4 @@
-import { chromium, LAUNCH, URL_APP, FX } from "./lib.mjs";
+import { chromium, LAUNCH, URL_APP, FX, goTab } from "./lib.mjs";
 const SP = process.argv[2] || ".";
 const b = await chromium.launch(LAUNCH);
 const p = await b.newPage({ viewport: { width: 1180, height: 820 } });
@@ -44,7 +44,7 @@ await p.evaluate(() => {
   saveBudgets();
   flushSaves();
 });
-await p.click("#tabs [data-tab=overzicht]");
+await goTab(p, "overzicht");
 await p.click("#rail .yearseg >> text=2026");
 await p.click("#compare-btn");
 const labels = await p.evaluate(() =>

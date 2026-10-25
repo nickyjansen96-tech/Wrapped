@@ -1,5 +1,5 @@
 // Uitklapbare onderdelen op het overzicht, profielnaam wijzigen en spaardoelen.
-import { chromium, LAUNCH, URL_APP, FX } from "./lib.mjs";
+import { chromium, LAUNCH, URL_APP, FX, goTab } from "./lib.mjs";
 const SP = process.argv[2] || ".";
 const b = await chromium.launch(LAUNCH);
 const p = await b.newPage({ viewport: { width: 820, height: 1180 } });
@@ -78,12 +78,12 @@ await p.press("#rename-" + id, "Enter");
 ok("dubbele naam geweigerd", /al een gebruiker met de naam Heleen/.test(await p.locator(".note").innerText()));
 await p.reload();
 ok("naam bewaard", (await p.locator("#profiles .seg:not(.add)[aria-pressed=true]").innerText()) === "Nick");
-await p.click("#tabs [data-tab=overzicht]");
+await goTab(p, "overzicht");
 await p.click("#profiles .seg:not(.add)[aria-pressed=true]");
 ok("tik op eigen profiel opent beheer", (await p.locator("text=Profiel toevoegen").count()) === 1);
 
 // 3. Spaardoelen
-await p.click("#tabs [data-tab=vermogen]");
+await goTab(p, "vermogen");
 ok("tab heet Sparen en vermogen", (await p.locator("#tabs [data-tab=vermogen]").innerText()) === "Sparen en vermogen");
 await p.click("#goal-add");
 await p.fill("#goal-name", "Vakantie");
@@ -138,7 +138,7 @@ await p.evaluate(() => flushSaves());
 await p.reload();
 ok("spaardoel bewaard", await p.evaluate(() => S.goals.length === 1 && S.goals[0].name === "Vakantie"));
 ok("in de back-up", await p.evaluate(() => backupData().goals[0].target === 2000));
-await p.click("#tabs [data-tab=vermogen]");
+await goTab(p, "vermogen");
 await p.click('[aria-label="Spaardoel Vakantie verwijderen"]');
 ok("verwijderd", (await p.locator('[data-goal="Vakantie"]').count()) === 0);
 // telefoon
@@ -147,11 +147,38 @@ await p.click("#goal-add");
 const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 ok("telefoon niet zijwaarts", ov <= 1, ov);
 await p.screenshot({ path: SP + "/spaardoel-tel.png" });
-await p.click("#tabs [data-tab=overzicht]");
+await goTab(p, "overzicht");
 await p.click("#budget-btn");
 const ov2 = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 ok("telefoon budget uitgeklapt niet zijwaarts", ov2 <= 1, ov2);
 await p.screenshot({ path: SP + "/uitklap-tel.png" });
+// 4. Menu met de onderdelen
+await p.setViewportSize({ width: 820, height: 1180 });
+ok(
+  "menu dicht, knop toont onderdeel",
+  (await p.locator("#tabs").isHidden()) && (await p.locator("#menu-cur").innerText()) === "Overzicht en budget",
+);
+await p.click("#menu-btn");
+ok(
+  "menu open met 5 onderdelen",
+  (await p.locator("#tabs button:visible").count()) === 5 &&
+    (await p.getAttribute("#menu-btn", "aria-expanded")) === "true",
+);
+await p.keyboard.press("Escape");
+ok("Esc sluit", await p.locator("#tabs").isHidden());
+await p.click("#menu-btn");
+await p.click("h1");
+ok("tik ernaast sluit", await p.locator("#tabs").isHidden());
+await goTab(p, "transacties");
+ok(
+  "kiezen sluit en wisselt",
+  (await p.locator("#tabs").isHidden()) && (await p.locator("#menu-cur").innerText()) === "Transacties",
+);
+const mb = await p.locator("#menu-btn").boundingBox(),
+  pb = await p.locator("#profiles").boundingBox();
+ok("menu naast de profielen", Math.abs(mb.y - pb.y) < 20 && mb.x > pb.x, JSON.stringify([mb, pb]));
+await p.click("#menu-btn");
+await p.screenshot({ path: SP + "/menu.png" });
 ok("geen JS-fouten", errs.length === 0, errs.join("|"));
 console.log(fails ? fails + " FAILED" : "ALL PASSED");
 process.exitCode = fails ? 1 : 0;

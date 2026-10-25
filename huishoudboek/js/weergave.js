@@ -8,7 +8,7 @@ function render() {
       b.dataset.tab === (S.tab === "vergelijk" || S.tab === "samenvatting" ? "overzicht" : S.tab),
     );
   const cur = document.querySelector('#tabs button[aria-selected="true"]');
-  if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest", inline: "nearest" });
+  $("#menu-cur").textContent = cur ? cur.textContent : "Menu";
   $("#back").hidden = !(history.state && history.state.n > 0);
   // De budgettabel krijgt de volle schermbreedte, zodat alle maanden ernaast passen.
   for (const w of document.querySelectorAll(".wrap"))

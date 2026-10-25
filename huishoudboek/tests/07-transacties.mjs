@@ -1,4 +1,4 @@
-import { chromium, LAUNCH, URL_APP, FX } from "./lib.mjs";
+import { chromium, LAUNCH, URL_APP, FX, goTab } from "./lib.mjs";
 const SP = process.argv[2] || ".";
 const b = await chromium.launch(LAUNCH);
 const p = await b.newPage({ viewport: { width: 820, height: 1180 } });
@@ -23,7 +23,7 @@ await p.evaluate(() => {
   compileRules();
   saveRules();
 });
-await p.click("#tabs [data-tab=transacties]");
+await goTab(p, "transacties");
 await p.click("#rail .yearseg >> text=2025");
 const row = n => p.locator(".tx").filter({ hasText: n });
 ok("tip over details en ＋ Regel", (await p.locator(".txtip").innerText()).includes("＋ Regel"));

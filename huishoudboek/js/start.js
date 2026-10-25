@@ -71,11 +71,38 @@ addEventListener("popstate", e => {
 });
 $("#back").addEventListener("click", () => history.back());
 $("#help").addEventListener("click", startTour);
+// Menu met de onderdelen, rechtsboven naast de profielen: openklappen, kiezen, en dicht bij een tik ernaast of Esc.
+function setMenu(open) {
+  $("#tabs").hidden = !open;
+  $("#menu-btn").setAttribute("aria-expanded", String(open));
+  if (open) {
+    // Rechts uitlijnen met de knop; past dat niet (knop staat links na omslaan van de kop), dan links.
+    const t = $("#tabs");
+    t.style.left = t.style.right = "";
+    if (t.getBoundingClientRect().left < 8) {
+      t.style.left = "0";
+      t.style.right = "auto";
+    }
+  }
+  if (open) ($('#tabs button[aria-selected="true"]') || $("#tabs button")).focus({ preventScroll: true });
+}
+$("#menu-btn").addEventListener("click", () => setMenu($("#tabs").hidden));
 $("#tabs").addEventListener("click", e => {
   const b = e.target.closest("button[data-tab]");
-  if (b && b.dataset.tab !== S.tab) {
+  if (!b) return;
+  setMenu(false);
+  if (b.dataset.tab !== S.tab) {
     S.tab = b.dataset.tab;
     go();
+  }
+});
+document.addEventListener("click", e => {
+  if (!$("#tabs").hidden && !e.target.closest(".menu")) setMenu(false);
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !$("#tabs").hidden) {
+    setMenu(false);
+    $("#menu-btn").focus();
   }
 });
 addEventListener("pagehide", flushSaves);

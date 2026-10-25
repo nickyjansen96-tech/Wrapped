@@ -29,6 +29,12 @@ financiële gegevens: die blijven op je toestel.
 - **Android (Chrome):** open de pagina → menu ⋮ → *App installeren*.
 - **Computer (Chrome/Edge):** het installeer-icoon in de adresbalk.
 
+## Menu
+
+Rechtsboven, naast de profielen, staat het menu (☰) met de onderdelen:
+*Overzicht en budget*, *Sparen en vermogen*, *Transacties*, *Regels en AI* en
+*Importeren*. Op de knop staat waar je nu bent; tik erop om uit te klappen.
+
 ## Transacties
 
 Inlezen via **Importeren**. De app herkent zelf van welke bank het bestand
@@ -122,7 +128,7 @@ gaan niet mee; namen van winkels en partijen wel.
 
 ## Regels laten maken door een AI-chat
 
-In het tabblad **Regels en AI**, bij *Transacties laten indelen door AI*. De
+Onder **Regels en AI** (in het menu), bij *Transacties laten indelen door AI*. De
 knop **✨ Laat AI indelen** staat ook op het overzicht, bij Transacties en na
 het inlezen, zodra er transacties zonder categorie zijn. Werkt met Claude,
 ChatGPT of elke andere AI-chat, in drie stappen:

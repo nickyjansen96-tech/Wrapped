@@ -15,9 +15,9 @@ const TOUR = [
     text: "Kies hier je naam. Iedere gebruiker heeft eigen transacties, budgetten en regels. Met ✎ wijzig je een naam of voeg je iemand toe.",
   },
   {
-    target: "#tabs",
+    target: "#menu-btn",
     title: "De onderdelen",
-    text: "Met deze tabbladen ga je naar je overzicht en budget, je vermogen, je transacties, je regels en het inlezen van bankbestanden.",
+    text: "Met dit menu, naast je naam, ga je naar je overzicht en budget, sparen en vermogen, je transacties, je regels en het inlezen van bankbestanden. Op de knop staat waar je nu bent.",
   },
   {
     tab: "importeren",
@@ -27,7 +27,7 @@ const TOUR = [
   },
   {
     tab: "transacties",
-    target: "#tabs [data-tab=transacties]",
+    target: "#menu-btn",
     title: "2. Controleer je transacties",
     text: "Hier zie je alles wat je hebt ingelezen, met soort betaling, plaats en omschrijving. Tik op een transactie voor alle details. Kies een categorie, of tik op ＋ Regel zodat vergelijkbare transacties voortaan vanzelf goed gaan.",
   },
@@ -35,7 +35,7 @@ const TOUR = [
     tab: "regels",
     target: "#ai-card",
     title: "3. Laat AI je transacties indelen",
-    text: "In het tabblad Regels en AI maakt een AI-chat zoals Claude of ChatGPT regels voor je, in drie stappen: vraag kopiëren, in de chat plakken, antwoord terugplakken. De knop ✨ Laat AI indelen brengt je hier vanaf elk scherm.",
+    text: "Onder Regels en AI (in het menu) maakt een AI-chat zoals Claude of ChatGPT regels voor je, in drie stappen: vraag kopiëren, in de chat plakken, antwoord terugplakken. De knop ✨ Laat AI indelen brengt je hier vanaf elk scherm.",
   },
   {
     tab: "overzicht",

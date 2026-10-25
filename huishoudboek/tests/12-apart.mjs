@@ -1,6 +1,6 @@
 // Declaraties en "Niet meetellen": markeren vanuit de details, buiten de overzichten, openstaand bedrag, filter,
 // regels, AI-categorie, maandsamenvatting en bewaren.
-import { chromium, LAUNCH, URL_APP, FX } from "./lib.mjs";
+import { chromium, LAUNCH, URL_APP, FX, goTab } from "./lib.mjs";
 const SP = process.argv[2] || ".";
 const b = await chromium.launch(LAUNCH);
 const p = await b.newPage({ viewport: { width: 820, height: 1180 } });
@@ -49,7 +49,7 @@ const over0 = await over(),
 ok("nog geen kaart zonder declaraties", (await p.locator("#apart-card").count()) === 0);
 
 // Albert Heijn € 66,84 op 11 sep als declaratie markeren via de details
-await p.click("#tabs [data-tab=transacties]");
+await goTab(p, "transacties");
 const ah = p.locator(".tx").filter({ hasText: "66,84" });
 await ah.locator(".txmain").click();
 ok(
@@ -61,7 +61,7 @@ ok("categorie is Declaraties", (await ah.locator("select.cat").inputValue()) ===
 ok("rij gedimd", (await ah.getAttribute("class")).includes("apart"));
 ok("terugknop", (await p.locator("#apart-undo").innerText()) === "Geen declaratie");
 
-await p.click("#tabs [data-tab=overzicht]");
+await goTab(p, "overzicht");
 ok("Over stijgt: uitgave telt niet mee", Math.abs((await over()) - over0 - 67) <= 1, over0 + " → " + (await over()));
 ok("Boodschappen zonder de declaratie", Math.abs(bs0 - (await boodschappen()) - 66.84) < 0.01);
 const card = await p.locator("#apart-card").innerText();
@@ -90,12 +90,12 @@ await p.evaluate(() => {
 });
 
 // Niet meetellen: Netflix
-await p.click("#tabs [data-tab=transacties]");
+await goTab(p, "transacties");
 const nf = p.locator(".tx").filter({ hasText: "NETFLIX" });
 await nf.locator(".txmain").click();
 await p.click("#apart-skip");
 ok("Netflix telt niet mee", (await nf.locator("select.cat").inputValue()) === "Niet meetellen");
-await p.click("#tabs [data-tab=overzicht]");
+await goTab(p, "overzicht");
 ok("Over zonder Netflix", Math.abs((await over()) - over0 - 67 - 14) <= 1, await over());
 ok("regel: 1 telt niet mee", /1 transactie telt niet mee/.test(await p.locator("#apart-card").innerText()));
 await p.click("#decl-btn");
@@ -107,7 +107,7 @@ await p.selectOption("#fcat", "Niet meetellen");
 const nfMain = p.locator(".tx").filter({ hasText: "NETFLIX" }).locator(".txmain");
 if ((await nfMain.getAttribute("aria-expanded")) !== "true") await nfMain.click();
 await p.click("#apart-undo");
-await p.click("#tabs [data-tab=overzicht]");
+await goTab(p, "overzicht");
 await p.evaluate(() => {
   S.month = 9; // "Bekijk" toonde het hele jaar
   render();

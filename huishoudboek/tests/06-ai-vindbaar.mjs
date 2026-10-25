@@ -1,4 +1,4 @@
-import { chromium, LAUNCH, URL_APP, FX } from "./lib.mjs";
+import { chromium, LAUNCH, URL_APP, FX, goTab } from "./lib.mjs";
 const SP = process.argv[2] || ".";
 const b = await chromium.launch(LAUNCH);
 const p = await b.newPage({ viewport: { width: 820, height: 1180 } });
@@ -16,9 +16,9 @@ await p.evaluate(() => {
 });
 await p.reload();
 ok("tabblad heet Regels en AI", (await p.locator("#tabs [data-tab=regels]").innerText()) === "Regels en AI");
-await p.click("#tabs [data-tab=regels]");
+await goTab(p, "regels");
 ok("zonder data: AI-blok legt uit", (await p.locator("#ai-card").innerText()).includes("Lees eerst je bankexport in"));
-await p.click("#tabs [data-tab=importeren]");
+await goTab(p, "importeren");
 await p.setInputFiles("#file", FX + "/mut4.txt");
 await p.waitForSelector(".note.info");
 const imp = await p.locator(".note.info").innerText();
@@ -42,7 +42,7 @@ ok("overzicht: AI-knop bij melding", await p.locator(".note >> text=Laat AI inde
 await p.screenshot({ path: SP + "/ai-entry-ov.png" });
 await p.click(".note >> text=Laat AI indelen");
 ok("overzicht → AI-blok", await p.locator("#ai-card").isVisible());
-await p.click("#tabs [data-tab=transacties]");
+await goTab(p, "transacties");
 ok("transacties: AI-banner", await p.locator(".note >> text=Laat AI indelen").isVisible());
 await p.click(".note >> text=Laat AI indelen");
 ok("transacties → AI-blok", await p.locator("#ai-card").isVisible());

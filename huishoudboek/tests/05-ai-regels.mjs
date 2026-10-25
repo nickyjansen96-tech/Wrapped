@@ -1,4 +1,4 @@
-import { chromium, LAUNCH, URL_APP, FX } from "./lib.mjs";
+import { chromium, LAUNCH, URL_APP, FX, goTab } from "./lib.mjs";
 const SP = process.argv[2] || ".";
 const b = await chromium.launch(LAUNCH);
 const ctx = await b.newContext({ viewport: { width: 820, height: 1180 } });
@@ -21,7 +21,7 @@ await p.setInputFiles("#file", FX + "/mut-1252.TXT");
 await p.waitForSelector(".note.info");
 await p.setInputFiles("#file", FX + "/mut4.txt");
 await p.waitForTimeout(300);
-await p.click("#tabs button[data-tab=regels]");
+await goTab(p, "regels");
 ok("titel", (await p.locator("#ai-card h2").innerText()) === "Transacties laten indelen door AI");
 ok(
   "knoppen Claude en ChatGPT",
